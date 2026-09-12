@@ -1,14 +1,16 @@
 'use client'
 
 import React, { useEffect } from 'react'
-import { AlertCircle, CheckCircle2, Video } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Video, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { PictogramAlertPayload } from '@/lib/types'
 
 interface EmergencyAlertBannerProps {
   alert: PictogramAlertPayload | null
+  patientDisplayName?: string
   onAcknowledge: () => void
   onRequestInterpreter?: () => void
+  onOpenConsole?: (sessionId: string) => void
 }
 
 /**
@@ -42,8 +44,10 @@ function playClinicalChime() {
 
 export function EmergencyAlertBanner({
   alert,
+  patientDisplayName,
   onAcknowledge,
   onRequestInterpreter,
+  onOpenConsole,
 }: EmergencyAlertBannerProps) {
   useEffect(() => {
     if (alert) {
@@ -54,13 +58,14 @@ export function EmergencyAlertBanner({
   if (!alert) return null
 
   const isCritical = alert.category?.toLowerCase().includes('emergency') || alert.clipKey.includes('pain') || alert.clipKey.includes('breathe')
+  const bedInfo = patientDisplayName || alert.patientName
 
   return (
     <div
       role="alert"
       aria-live="assertive"
       className={`
-        w-full p-4 rounded-xl border-2 mb-4 shadow-lg animate-pulse transition-all
+        w-full p-4 rounded-2xl border-2 mb-4 shadow-lg animate-pulse transition-all
         ${isCritical
           ? 'bg-red-50 border-red-600 text-red-950 dark:bg-red-950/80 dark:border-red-500 dark:text-red-100'
           : 'bg-amber-50 border-amber-600 text-amber-950 dark:bg-amber-950/80 dark:border-amber-500 dark:text-amber-100'
@@ -69,33 +74,52 @@ export function EmergencyAlertBanner({
     >
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full bg-red-600 text-white shrink-0">
+          <div className="p-2.5 rounded-full bg-red-600 text-white shrink-0 shadow-md">
             <AlertCircle className="w-6 h-6 animate-bounce" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs uppercase font-extrabold px-2 py-0.5 rounded bg-red-600 text-white">
-                Patient Triage Alert
+                🚨 Urgent Patient Triage Alert
               </span>
+              {bedInfo && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200">
+                  {bedInfo}
+                </span>
+              )}
               <span className="text-xs text-slate-500 dark:text-slate-400">
                 {new Date(alert.timestamp).toLocaleTimeString()}
               </span>
             </div>
-            <h3 className="text-lg sm:text-xl font-black mt-0.5">
+            <h3 className="text-lg sm:text-xl font-black mt-1">
               {alert.label}
             </h3>
             <p className="text-xs sm:text-sm opacity-90">
-              Patient tapped pictogram on bedside kiosk tablet
+              {bedInfo ? (
+                <span>Patient at <strong className="font-bold">{bedInfo}</strong> triggered urgent bedside assistance</span>
+              ) : (
+                'Patient tapped urgent pictogram on bedside kiosk tablet'
+              )}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+          {onOpenConsole && (
+            <Button
+              size="sm"
+              onClick={() => onOpenConsole(alert.sessionId)}
+              className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 shadow"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open Bed Console
+            </Button>
+          )}
           {onRequestInterpreter && (
             <Button
               size="sm"
               onClick={onRequestInterpreter}
-              className="bg-[#4F46E5] hover:bg-[#4338CA] text-white flex items-center gap-1.5"
+              className="bg-[#4F46E5] hover:bg-[#4338CA] text-white text-xs font-bold flex items-center gap-1.5"
             >
               <Video className="w-4 h-4" />
               Page Interpreter
@@ -105,7 +129,7 @@ export function EmergencyAlertBanner({
             variant="outline"
             size="sm"
             onClick={onAcknowledge}
-            className="border-slate-400 bg-white/80 dark:bg-slate-900/80 hover:bg-white flex items-center gap-1.5"
+            className="border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 hover:bg-white text-xs font-bold flex items-center gap-1.5"
           >
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             Acknowledge

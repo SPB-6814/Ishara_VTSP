@@ -22,6 +22,13 @@ import { Input } from '@/components/ui/input'
 import { Dialog } from '@base-ui/react/dialog'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
+import { EmergencyAlertBanner } from '@/components/emergency-alert-banner'
+import {
+  HOSPITAL_ALERTS_CHANNEL,
+  GLOBAL_HOSPITAL_ALERTS_BC,
+  REALTIME_EVENTS,
+} from '@/lib/realtime'
+import type { PictogramAlertPayload } from '@/lib/types'
 
 interface BedSession {
   id: string
@@ -48,6 +55,56 @@ export default function HospitalRosterPage() {
   const [isQROpen, setIsQROpen] = useState(false)
   const [selectedSession, setSelectedSession] = useState<BedSession | null>(null)
   const [copied, setCopied] = useState(false)
+
+  // Realtime Hospital-wide Emergency Alerts
+  const [activeEmergencyAlert, setActiveEmergencyAlert] = useState<PictogramAlertPayload | null>(null)
+
+  // Subscribe to hospital-wide emergency alerts from any patient tablet
+  useEffect(() => {
+    // 1. Local BroadcastChannel for instant local / multi-tab alert detection
+    let localBC: BroadcastChannel | null = null
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        localBC = new BroadcastChannel(GLOBAL_HOSPITAL_ALERTS_BC)
+        localBC.onmessage = (event) => {
+          const { type, payload } = event.data || {}
+          if (type === REALTIME_EVENTS.EMERGENCY_ALERT && payload) {
+            setActiveEmergencyAlert(payload)
+            toast.error(`🚨 EMERGENCY ALERT: ${payload.patientName || 'Bedside'} — ${payload.label}`)
+          }
+        }
+      }
+    } catch {}
+
+    // 2. Supabase Realtime channel for remote devices
+    let supabase: any = null
+    let channel: any = null
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        supabase = createClient()
+        channel = supabase.channel(HOSPITAL_ALERTS_CHANNEL)
+        channel
+          .on(
+            'broadcast',
+            { event: REALTIME_EVENTS.EMERGENCY_ALERT },
+            ({ payload }: { payload: PictogramAlertPayload }) => {
+              if (payload) {
+                setActiveEmergencyAlert(payload)
+                toast.error(`🚨 EMERGENCY ALERT: ${payload.patientName || 'Bedside'} — ${payload.label}`)
+              }
+            }
+          )
+          .subscribe()
+      }
+    } catch {}
+
+    return () => {
+      if (localBC) localBC.close()
+      if (channel && supabase) {
+        supabase.removeChannel(channel)
+      }
+    }
+  }, [])
 
   // Fetch current user and active sessions
   const fetchRoster = React.useCallback(async () => {
@@ -204,6 +261,16 @@ export default function HospitalRosterPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6">
+        {/* Urgent Emergency Alert Banner for Doctor (Hospital-wide) */}
+        {activeEmergencyAlert && (
+          <EmergencyAlertBanner
+            alert={activeEmergencyAlert}
+            patientDisplayName={activeEmergencyAlert.patientName}
+            onAcknowledge={() => setActiveEmergencyAlert(null)}
+            onOpenConsole={(sid) => router.push(`/dashboard/${sid}`)}
+          />
+        )}
+
         {/* Hospital Inpatient Census Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center gap-3">
@@ -266,17 +333,22 @@ export default function HospitalRosterPage() {
               {sessions.map((sess) => {
                 const isRequested = sess.status === 'interpreter_requested'
                 const isConnected = sess.status === 'interpreter_connected'
+                const isEmergencyActive = activeEmergencyAlert?.sessionId === sess.id
 
                 return (
                   <Card
                     key={sess.id}
-                    className="border-2 border-slate-200 dark:border-slate-800 hover:border-teal-500 transition-all rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-xs"
+                    className={`border-2 transition-all rounded-2xl bg-white dark:bg-slate-900 overflow-hidden shadow-xs ${
+                      isEmergencyActive
+                        ? 'border-red-500 ring-2 ring-red-500/50 shadow-md shadow-red-500/20 animate-pulse'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-teal-500'
+                    }`}
                   >
                     <CardContent className="p-4 sm:p-5 space-y-4">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                            <span className={`w-2.5 h-2.5 rounded-full ${isEmergencyActive ? 'bg-red-600 animate-ping' : 'bg-emerald-500'}`} />
                             <h3 className="font-black text-base text-slate-900 dark:text-white">
                               {sess.patient_display_name}
                             </h3>
@@ -288,14 +360,18 @@ export default function HospitalRosterPage() {
 
                         <span
                           className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                            isConnected
+                            isEmergencyActive
+                              ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-300 animate-bounce'
+                              : isConnected
                               ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200'
                               : isRequested
                               ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 animate-pulse'
                               : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200'
                           }`}
                         >
-                          {isConnected
+                          {isEmergencyActive
+                            ? `🚨 ${activeEmergencyAlert.label}`
+                            : isConnected
                             ? '🎥 Interpreter Live'
                             : isRequested
                             ? '⏳ Interpreter Paged'
@@ -326,7 +402,11 @@ export default function HospitalRosterPage() {
                           <Button
                             size="sm"
                             onClick={() => router.push(`/dashboard/${sess.id}`)}
-                            className="h-8 px-3 text-xs font-bold bg-[#084C5B] hover:bg-[#0D748A] text-white flex items-center gap-1 shadow"
+                            className={`h-8 px-3 text-xs font-bold text-white flex items-center gap-1 shadow ${
+                              isEmergencyActive
+                                ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                                : 'bg-[#084C5B] hover:bg-[#0D748A]'
+                            }`}
                           >
                             <span>Open Console</span>
                             <ExternalLink className="w-3.5 h-3.5" />

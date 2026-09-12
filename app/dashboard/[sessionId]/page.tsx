@@ -287,6 +287,7 @@ export default function DashboardPage() {
         {/* Emergency Alert Banner (P0 Realtime) */}
         <EmergencyAlertBanner
           alert={activeAlert}
+          patientDisplayName={patientDisplayName}
           onAcknowledge={clearAlert}
           onRequestInterpreter={handlePageInterpreter}
         />

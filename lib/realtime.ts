@@ -15,12 +15,17 @@ export function getSessionChannel(sessionId: string) {
 /** Global channel for broadcasting interpreter requests */
 export const INTERPRETER_REQUESTS_CHANNEL = 'interpreter-requests'
 
+/** Global channel for broadcasting emergency triage alerts across hospital beds */
+export const HOSPITAL_ALERTS_CHANNEL = 'hospital-alerts'
+export const GLOBAL_HOSPITAL_ALERTS_BC = 'ishara_global_hospital_alerts'
+
 /** Presence channel for interpreter online/offline tracking */
 export const INTERPRETER_PRESENCE_CHANNEL = 'interpreter-presence'
 
 /** Realtime event names */
 export const REALTIME_EVENTS = {
   PICTOGRAM_ALERT: 'pictogram_alert',
+  EMERGENCY_ALERT: 'emergency_alert',
   PLAY_CLIP: 'play_clip',
   STATUS_CHANGE: 'status_change',
   GESTURE_TEXT: 'gesture_text',

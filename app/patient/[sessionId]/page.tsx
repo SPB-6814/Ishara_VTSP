@@ -55,15 +55,31 @@ export default function PatientPage() {
   }
 
   const handleTriggerAlert = (pictogram: DetailedPictogram, extraNote?: string) => {
-    // 1. Send instant alert via Realtime broadcast
-    sendPictogramAlert(pictogram.key, pictogram.label, pictogram.category)
+    const isUrgent = pictogram.priority === 'P0'
+    const fullNote = extraNote ? `${pictogram.label} (${extraNote})` : pictogram.label
+
+    // 1. Send alert via Realtime broadcast (only P0 urgent informs doctor via emergency banner)
+    sendPictogramAlert(
+      pictogram.key,
+      pictogram.label,
+      pictogram.category,
+      pictogram.priority,
+      isUrgent,
+      bedName
+    )
 
     // 2. Show clear confirmation banner for Deaf patient
-    setLastAlertText(extraNote ? `${pictogram.label} (${extraNote})` : pictogram.label)
-    setLastAlertHindi(pictogram.hindiText || 'डॉक्टर को सूचित कर दिया गया है')
+    setLastAlertText(fullNote)
+    setLastAlertHindi(
+      pictogram.hindiText || (isUrgent ? 'डॉक्टर को तुरंत सूचित कर दिया गया है' : 'नर्सिंग स्टेशन को सूचित किया गया')
+    )
     setShowingConfirmation(true)
 
-    toast.success(`Alert Sent: ${pictogram.label} ${extraNote ? `(${extraNote})` : ''} • डॉक्टर को सूचित किया गया`)
+    if (isUrgent) {
+      toast.error(`Urgent Alert Sent: ${fullNote} • डॉक्टर को तुरंत सूचित किया गया`)
+    } else {
+      toast.success(`Request Sent: ${fullNote} • सूचित किया गया`)
+    }
   }
 
   const handleRequestInterpreter = () => {

@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react'
 import { useTheme } from 'next-themes'
 import { Sun, Moon, Monitor, Sunset } from 'lucide-react'
-import { toast } from 'sonner'
 
 export function ThemeNightLightDock() {
   const { theme, setTheme } = useTheme()
@@ -28,18 +27,14 @@ export function ThemeNightLightDock() {
     if (nextState) {
       document.documentElement.classList.add('night-light')
       localStorage.setItem('ishara-night-light', 'true')
-      toast.info('Night Light active: Blue-light filter applied (Warm tone)')
     } else {
       document.documentElement.classList.remove('night-light')
       localStorage.setItem('ishara-night-light', 'false')
-      toast.info('Night Light disabled (Standard color profile)')
     }
   }
 
   const handleSelectTheme = (mode: 'light' | 'dark' | 'system') => {
     setTheme(mode)
-    const label = mode === 'system' ? 'System preference' : `${mode.charAt(0).toUpperCase() + mode.slice(1)} mode`
-    toast.success(`Theme set to ${label}`)
   }
 
   if (!mounted) {
@@ -126,10 +121,10 @@ export function ThemeNightLightDock() {
             : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-amber-600 dark:hover:text-amber-400'
         }`}
       >
-        <Sunset className={`w-3.5 h-3.5 ${nightLight ? 'animate-pulse' : ''}`} />
+        <Sunset className="w-3.5 h-3.5" />
         <span className="hidden sm:inline text-[11px] font-semibold">Night Light</span>
         {nightLight && (
-          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping inline-block" />
+          <span className="w-1.5 h-1.5 rounded-full bg-white inline-block" />
         )}
       </button>
     </aside>

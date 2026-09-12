@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import { PictogramGrid } from '@/components/pictogram-grid'
 import { ISLVideoPlayer } from '@/components/isl-video-player'
-import { StaffControlsDrawer } from '@/components/staff-controls-drawer'
 import { LiveKitVideoCall } from '@/components/livekit-video-call'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import type { DetailedPictogram } from '@/lib/pictograms'
@@ -13,7 +12,6 @@ import {
   CheckCircle2,
   Video,
   Shield,
-  Wifi,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -43,7 +41,6 @@ export default function PatientPage() {
     activeClip,
     sessionStatus,
     sendPictogramAlert,
-    sendPlayClip,
     clearClip,
     sendStatusChange,
     requestInterpreter,
@@ -67,10 +64,6 @@ export default function PatientPage() {
     setShowingConfirmation(true)
 
     toast.success(`Alert Sent: ${pictogram.label} ${extraNote ? `(${extraNote})` : ''} • डॉक्टर को सूचित किया गया`)
-  }
-
-  const handleDoctorPlayClip = (clipKey: string, clipUrl: string, label: string) => {
-    sendPlayClip(clipKey, clipUrl, label)
   }
 
   const handleRequestInterpreter = () => {
@@ -113,42 +106,9 @@ export default function PatientPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {sessionStatus === 'interpreter_connected' ? (
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-200 border border-indigo-300 animate-pulse">
-                <Video className="w-3.5 h-3.5 text-indigo-600" />
-                Interpreter Live
-              </span>
-            ) : sessionStatus === 'interpreter_requested' ? (
-              <div className="flex items-center gap-1.5">
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border border-amber-300">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
-                  Paging...
-                </span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleCancelInterpreter}
-                  className="h-8 px-2 text-xs font-bold text-amber-800 hover:text-red-600 hover:bg-amber-100 rounded-lg flex items-center gap-1"
-                >
-                  <X className="w-3.5 h-3.5 text-red-600" />
-                  <span>Cancel</span>
-                </Button>
-              </div>
-            ) : (
-              <Button
-                size="sm"
-                onClick={handleRequestInterpreter}
-                className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold text-xs h-8 px-3 rounded-lg flex items-center gap-1.5 shadow-sm"
-              >
-                <Video className="w-3.5 h-3.5" />
-                <span>Call Interpreter</span>
-              </Button>
-            )}
-
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200">
-              <Wifi className="w-3.5 h-3.5 text-emerald-600" />
-              Nurse Station Online
+          <div className="sm:hidden">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300">
+              {bedName}
             </span>
           </div>
         </div>
@@ -305,13 +265,7 @@ export default function PatientPage() {
         />
       )}
 
-      {/* Bedside Clinician Controls Drawer */}
-      <StaffControlsDrawer
-        sessionId={sessionId}
-        onRequestInterpreter={handleRequestInterpreter}
-        onPlayClip={handleDoctorPlayClip}
-        isInterpreterConnected={sessionStatus === 'interpreter_connected'}
-      />
+
 
       {/* Patient Footer */}
       <footer className="p-3 text-center text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60">

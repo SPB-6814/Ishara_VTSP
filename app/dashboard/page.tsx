@@ -8,12 +8,10 @@ import {
   Plus,
   QrCode,
   ExternalLink,
-  Video,
   LogOut,
   RefreshCw,
   Clock,
   Bed,
-  CheckCircle2,
   Copy,
   Check,
   X,
@@ -206,47 +204,33 @@ export default function HospitalRosterPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6">
-        {/* Metric Cards Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <CardContent className="p-4">
-              <span className="text-xs text-slate-500 font-medium">Active Beds</span>
-              <div className="flex items-center gap-2 mt-1">
-                <Bed className="w-5 h-5 text-teal-600" />
-                <span className="text-2xl font-black">{sessions.length}</span>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Hospital Inpatient Census Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-teal-50 dark:bg-teal-950 border border-teal-200 dark:border-teal-800 text-[#084C5B] dark:text-teal-300">
+              <Bed className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium block">
+                Hospital Inpatient Census
+              </span>
+              <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                {sessions.length} Active {sessions.length === 1 ? 'Bed' : 'Beds'} Under Clinical Care
+              </span>
+            </div>
+          </div>
 
-          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <CardContent className="p-4">
-              <span className="text-xs text-slate-500 font-medium">Emergency Triage (P0)</span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-2xl font-black text-red-600">Active</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <CardContent className="p-4">
-              <span className="text-xs text-slate-500 font-medium">ISL Interpreter Pool</span>
-              <div className="flex items-center gap-2 mt-1">
-                <Video className="w-5 h-5 text-indigo-600" />
-                <span className="text-2xl font-black text-indigo-600">Online</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-            <CardContent className="p-4">
-              <span className="text-xs text-slate-500 font-medium">Realtime Signaling</span>
-              <div className="flex items-center gap-2 mt-1">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span className="text-sm font-bold text-emerald-600">Connected</span>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchRoster}
+              className="text-xs font-bold flex items-center gap-1.5 h-8 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Bedside Triage Roster Section */}
@@ -254,23 +238,13 @@ export default function HospitalRosterPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <Stethoscope className="w-5 h-5 text-[#084C5B]" />
+                <Stethoscope className="w-5 h-5 text-[#084C5B] dark:text-teal-400" />
                 Bedside Patient Triage Roster
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Live monitoring across all active hospital beds and paired ISL tablet kiosks
               </p>
             </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchRoster}
-              className="text-xs font-bold flex items-center gap-1.5 h-8 border-slate-300"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Refresh
-            </Button>
           </div>
 
           {loading ? (

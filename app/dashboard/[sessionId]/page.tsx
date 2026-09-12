@@ -352,20 +352,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Status Metrics Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-            <CardContent className="p-3 sm:p-4">
-              <span className="text-xs text-slate-500 font-medium">Session Status</span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span className="text-sm sm:text-base font-bold capitalize text-slate-900 dark:text-white">
-                  {sessionStatus.replace('_', ' ')}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
+        {/* Status Metrics Bar (Dynamic Session Data Only) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
             <CardContent className="p-3 sm:p-4">
               <span className="text-xs text-slate-500 font-medium">Remote Interpreter</span>
@@ -375,28 +363,16 @@ export default function DashboardPage() {
                     sessionStatus === 'interpreter_connected'
                       ? 'bg-emerald-500'
                       : sessionStatus === 'interpreter_requested'
-                      ? 'bg-amber-500 animate-ping'
+                      ? 'bg-amber-500'
                       : 'bg-slate-400'
                   }`}
                 />
                 <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                   {sessionStatus === 'interpreter_connected'
-                    ? 'Connected'
+                    ? 'Connected (2-Way Video Live)'
                     : sessionStatus === 'interpreter_requested'
-                    ? 'Paging...'
+                    ? 'Paging Standby Pool...'
                     : 'Standby'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-            <CardContent className="p-3 sm:p-4">
-              <span className="text-xs text-slate-500 font-medium">AI Fallback Library</span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
-                <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                  48 ISL Clips Ready
                 </span>
               </div>
             </CardContent>
@@ -406,9 +382,9 @@ export default function DashboardPage() {
             <CardContent className="p-3 sm:p-4">
               <span className="text-xs text-slate-500 font-medium">Audit Events Logged</span>
               <div className="flex items-center gap-2 mt-1">
-                <FileText className="w-4 h-4 text-teal-600" />
+                <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                 <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                  {events.length} Interactions
+                  {events.length} Interactions Recorded
                 </span>
               </div>
             </CardContent>

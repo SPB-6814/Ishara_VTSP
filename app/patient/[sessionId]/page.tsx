@@ -48,15 +48,6 @@ export default function PatientPage() {
     setShowingConfirmation(true)
 
     toast.success(`Alert Sent: ${pictogram.label} ${extraNote ? `(${extraNote})` : ''} • डॉक्टर को सूचित किया गया`)
-
-    // Also auto-play reassurance clip if this is an emergency
-    if (pictogram.priority === 'P0' && pictogram.key !== 'pain-level') {
-      sendPlayClip(
-        'we-are-helping',
-        '/videos/we-are-helping.mp4',
-        'We are helping you • डॉक्टर आ रहे हैं'
-      )
-    }
   }
 
   const handleDoctorPlayClip = (clipKey: string, clipUrl: string, label: string) => {
@@ -115,17 +106,74 @@ export default function PatientPage() {
                 Paging Interpreter...
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200">
-                <Wifi className="w-3.5 h-3.5 text-emerald-600" />
-                Ready • ऑनलाइन
-              </span>
+              <Button
+                size="sm"
+                onClick={handleRequestInterpreter}
+                className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold text-xs h-8 px-3 rounded-lg flex items-center gap-1.5 shadow-sm"
+              >
+                <Video className="w-3.5 h-3.5" />
+                <span>Call Interpreter</span>
+              </Button>
             )}
+
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200">
+              <Wifi className="w-3.5 h-3.5 text-emerald-600" />
+              Nurse Station Online
+            </span>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
       <div className="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4">
+        {/* Dedicated 1-Tap ISL Interpreter Call Card for Deaf Patient */}
+        {sessionStatus === 'interpreter_requested' ? (
+          <div className="w-full p-4 sm:p-5 rounded-2xl bg-amber-50 border-2 border-amber-400 text-amber-950 dark:bg-amber-950/40 dark:border-amber-600 dark:text-amber-100 flex items-center justify-between gap-3 shadow-md animate-pulse">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-200 dark:bg-amber-900/60 rounded-full shrink-0">
+                <Video className="w-6 h-6 text-amber-800 dark:text-amber-200 animate-bounce" />
+              </div>
+              <div>
+                <span className="text-xs uppercase font-extrabold tracking-wider text-amber-800 dark:text-amber-300 block">
+                  Interpreter Paged • अनुवादक को संदेश भेजा गया है
+                </span>
+                <h3 className="text-base sm:text-lg font-black">
+                  Connecting to Remote ISL Interpreter...
+                </h3>
+                <p className="text-xs opacity-80 mt-0.5">
+                  Please stay in front of this screen. The video relay will launch automatically once accepted.
+                </p>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900 shrink-0">
+              Connecting...
+            </span>
+          </div>
+        ) : sessionStatus !== 'interpreter_connected' && (
+          <div className="w-full p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-teal-50 dark:from-indigo-950/30 dark:to-teal-950/30 border border-indigo-200 dark:border-indigo-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-[#4F46E5] text-white shrink-0 shadow">
+                <Video className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                  Need Indian Sign Language Translation? / क्या आपको सांकेतिक भाषा अनुवादक चाहिए?
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Connect 2-party live HD video with a certified ISL interpreter directly from this tablet.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleRequestInterpreter}
+              className="w-full sm:w-auto bg-[#4F46E5] hover:bg-[#4338CA] text-white font-black text-xs sm:text-sm h-10 px-5 rounded-xl flex items-center justify-center gap-2 shadow"
+            >
+              <Video className="w-4 h-4" />
+              <span>🤟 Call Live Interpreter / अनुवादक बुलाएं</span>
+            </Button>
+          </div>
+        )}
+
         {/* Instant Alert Confirmation Banner */}
         {showingConfirmation && lastAlertText && (
           <div
@@ -138,7 +186,7 @@ export default function PatientPage() {
               </div>
               <div>
                 <span className="text-xs uppercase font-extrabold tracking-wider opacity-90 block">
-                  Alert Sent to Doctor / डॉक्टर को संदेश भेजा गया
+                  Alert Sent to Nurse Station / डॉक्टर को संदेश भेजा गया
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black">
                   &ldquo;{lastAlertText}&rdquo; {lastAlertHindi && `• ${lastAlertHindi}`}

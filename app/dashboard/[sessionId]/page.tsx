@@ -18,10 +18,22 @@ import {
   Clock,
   FileText,
   Loader2,
+  QrCode,
+  Copy,
+  Check,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
 export default function DashboardPage() {
@@ -32,6 +44,11 @@ export default function DashboardPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [isPagingInterpreter, setIsPagingInterpreter] = useState(false)
   const [patientDisplayName, setPatientDisplayName] = useState('Patient Bed 4A (Ramesh)')
+  const [pairingOpen, setPairingOpen] = useState(false)
+  const [copiedUrl, setCopiedUrl] = useState(false)
+  const [tabletUrl, setTabletUrl] = useState('')
+  const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null)
+  const [escalationTriggered, setEscalationTriggered] = useState(false)
 
   const {
     activeAlert,
@@ -116,6 +133,48 @@ export default function DashboardPage() {
     setTimeout(() => setIsPagingInterpreter(false), 2500)
   }
 
+  // Tablet pairing URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setTabletUrl(`${window.location.origin}/patient/${sessionId}`)
+    }
+  }, [sessionId])
+
+  const handleCopyTabletUrl = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(tabletUrl)
+      setCopiedUrl(true)
+      toast.success('Bedside tablet link copied!')
+      setTimeout(() => setCopiedUrl(false), 2000)
+    }
+  }
+
+  // 60-Second Auto-Fallback Escalation Timer
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null
+    if (sessionStatus === 'interpreter_requested') {
+      setCountdownSeconds(60)
+      setEscalationTriggered(false)
+      timer = setInterval(() => {
+        setCountdownSeconds((prev) => {
+          if (prev === null || prev <= 1) {
+            setEscalationTriggered(true)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      setCountdownSeconds(null)
+      setEscalationTriggered(false)
+      if (timer) clearInterval(timer)
+    }
+
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [sessionStatus])
+
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
       {/* Top Navigation */}
@@ -151,11 +210,21 @@ export default function DashboardPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.open(`/patient/${sessionId}`, '_blank')}
+              onClick={() => setPairingOpen(true)}
               className="border-teal-300 text-[#084C5B] hover:bg-teal-50 dark:border-teal-700 dark:text-teal-300 text-xs flex items-center gap-1.5"
             >
+              <QrCode className="w-3.5 h-3.5" />
+              Pair Tablet
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open(`/patient/${sessionId}`, '_blank')}
+              className="border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 text-xs flex items-center gap-1.5"
+            >
               <ExternalLink className="w-3.5 h-3.5" />
-              Open Patient Tablet
+              Open Tablet
             </Button>
 
             <Button
@@ -189,6 +258,58 @@ export default function DashboardPage() {
           onAcknowledge={clearAlert}
           onRequestInterpreter={handlePageInterpreter}
         />
+
+        {/* 60-Second Auto-Fallback Escalation Alert */}
+        {sessionStatus === 'interpreter_requested' && (
+          <div
+            role="status"
+            className={`w-full p-4 rounded-2xl border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md transition-all ${
+              escalationTriggered
+                ? 'bg-amber-50 border-amber-500 text-amber-950 dark:bg-amber-950/40 dark:border-amber-500 dark:text-amber-100'
+                : 'bg-indigo-50 border-indigo-400 text-indigo-950 dark:bg-indigo-950/40 dark:border-indigo-600 dark:text-indigo-100'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl shrink-0 ${escalationTriggered ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}>
+                {escalationTriggered ? <AlertTriangle className="w-5 h-5" /> : <Video className="w-5 h-5 animate-pulse" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded text-white ${escalationTriggered ? 'bg-amber-600' : 'bg-indigo-600'}`}>
+                    {escalationTriggered ? 'Auto-Fallback Escalation' : 'Paging ISL Relay'}
+                  </span>
+                  {!escalationTriggered && countdownSeconds !== null && (
+                    <span className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300">
+                      Escalation in {countdownSeconds}s
+                    </span>
+                  )}
+                </div>
+                <h4 className="font-bold text-sm sm:text-base mt-0.5">
+                  {escalationTriggered
+                    ? 'No remote interpreter accepted within 60s. Auto-fallback recommended.'
+                    : 'Paging certified remote ISL interpreters. Standing by for connection...'}
+                </h4>
+                <p className="text-xs opacity-80">
+                  {escalationTriggered
+                    ? 'Recommend using the ISL Video Library (P2 AI Fallback) below to play pre-recorded sign clips on the patient tablet.'
+                    : 'The patient screen will automatically connect into 2-party HD video when an interpreter accepts.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handlePageInterpreter}
+                className="text-xs font-bold flex items-center gap-1 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Re-Page
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Status Metrics Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -393,6 +514,55 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Bedside Tablet QR Pairing Modal */}
+      <Dialog open={pairingOpen} onOpenChange={setPairingOpen}>
+        <DialogContent className="max-w-md bg-white dark:bg-slate-900 border-2 border-[#084C5B] p-6 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-[#084C5B] dark:text-teal-400" />
+              Bedside Tablet Pairing
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Scan with an iPad, Android tablet, or smartphone camera to launch this patient&apos;s bedside kiosk.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+            <div className="p-3 bg-white rounded-2xl shadow-md border border-slate-200">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(tabletUrl)}`}
+                alt="Bedside Pairing QR Code"
+                width={200}
+                height={200}
+                className="rounded-lg"
+              />
+            </div>
+            <p className="text-[11px] font-mono bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded text-slate-700 dark:text-slate-300 break-all select-all text-center">
+              {tabletUrl}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <Button
+              onClick={handleCopyTabletUrl}
+              variant="outline"
+              className="flex-1 text-xs font-bold flex items-center justify-center gap-1.5"
+            >
+              {copiedUrl ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+              {copiedUrl ? 'Copied!' : 'Copy Link'}
+            </Button>
+            <Button
+              onClick={() => window.open(tabletUrl, '_blank')}
+              className="flex-1 bg-[#084C5B] hover:bg-[#0D748A] text-white text-xs font-bold flex items-center justify-center gap-1.5"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open Tablet
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   )
 }

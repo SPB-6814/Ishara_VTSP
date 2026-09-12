@@ -27,12 +27,47 @@ interface IncomingRequest {
   requestedAt: string
 }
 
+function playIncomingCallRing() {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    if (!AudioContextClass) return
+    const ctx = new AudioContextClass()
+    const now = ctx.currentTime
+
+    // Standard high-priority two-tone ring (853Hz + 960Hz)
+    const osc1 = ctx.createOscillator()
+    const osc2 = ctx.createOscillator()
+    const gain = ctx.createGain()
+
+    osc1.type = 'sine'
+    osc1.frequency.setValueAtTime(853, now)
+    osc2.type = 'sine'
+    osc2.frequency.setValueAtTime(960, now)
+
+    gain.gain.setValueAtTime(0.25, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8)
+
+    osc1.connect(gain)
+    osc2.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc1.start(now)
+    osc2.start(now)
+    osc1.stop(now + 0.8)
+    osc2.stop(now + 0.8)
+  } catch {}
+}
+
 export default function InterpreterDashboard() {
   const router = useRouter()
   const [status, setStatus] = useState<'available' | 'busy' | 'offline'>('available')
   const [requests, setRequests] = useState<IncomingRequest[]>([])
 
   const handleNewRequest = React.useCallback((payload: any) => {
+    playIncomingCallRing()
+
     const req: IncomingRequest = {
       id: `req-${Date.now()}`,
       sessionId: payload?.sessionId || 'demo-session',
@@ -119,7 +154,11 @@ export default function InterpreterDashboard() {
           type: REALTIME_EVENTS.STATUS_CHANGE,
           payload: statusPayload,
         })
-        bc.close()
+        setTimeout(() => {
+          try {
+            bc.close()
+          } catch {}
+        }, 3000)
       }
     } catch {}
 

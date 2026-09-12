@@ -3,6 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react'
 import { X, RotateCcw, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { EMERGENCY_P0_PICTOGRAMS, ALL_CATEGORY_PICTOGRAMS } from '@/lib/pictograms'
 
 interface ISLVideoPlayerProps {
   clipKey: string
@@ -23,6 +24,13 @@ export function ISLVideoPlayer({
 }: ISLVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [hasError, setHasError] = useState(false)
+
+  const resolvedHindi =
+    hindiLabel ||
+    EMERGENCY_P0_PICTOGRAMS.find((p) => p.key === clipKey)?.hindiText ||
+    Object.values(ALL_CATEGORY_PICTOGRAMS)
+      .flat()
+      .find((p) => p.key === clipKey)?.hindiText
 
   useEffect(() => {
     // Optional auto-dismiss after clip duration
@@ -89,8 +97,8 @@ export function ISLVideoPlayer({
                   Indian Sign Language Clip
                 </p>
                 <h3 className="text-2xl font-black text-white">{clipLabel}</h3>
-                {hindiLabel && (
-                  <p className="text-lg font-medium text-teal-200">{hindiLabel}</p>
+                {resolvedHindi && (
+                  <p className="text-lg font-medium text-teal-200">{resolvedHindi}</p>
                 )}
                 <p className="text-xs text-slate-400 mt-2">
                   Key: <code className="bg-slate-800 px-2 py-0.5 rounded text-teal-300">{clipKey}</code>
@@ -105,9 +113,9 @@ export function ISLVideoPlayer({
               <span className="text-lg sm:text-2xl font-black text-white tracking-wide">
                 &ldquo;{clipLabel}&rdquo;
               </span>
-              {hindiLabel && (
+              {resolvedHindi && (
                 <span className="block text-sm sm:text-base font-semibold text-teal-300">
-                  {hindiLabel}
+                  {resolvedHindi}
                 </span>
               )}
             </div>

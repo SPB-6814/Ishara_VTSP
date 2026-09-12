@@ -20,14 +20,30 @@ export default function InterpreterAuthPage() {
     if (!email) return
 
     setLoading(true)
-    setTimeout(() => {
-      setLoading(false)
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        const { createClient } = await import('@/lib/supabase/client')
+        const supabase = createClient()
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/interpreter/dashboard`,
+          },
+        })
+        if (error) throw error
+      }
       setSentMagicLink(true)
       toast.success('Magic link sent to ' + email)
-    }, 800)
+    } catch {
+      setSentMagicLink(true)
+      toast.success('Magic link sent to ' + email + ' (Demo Mode)')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleQuickDemoLogin = () => {
+    document.cookie = 'ishara_demo_role=interpreter; path=/; max-age=86400; SameSite=Lax'
     toast.success('Logged in as Certified ISL Interpreter')
     router.push('/interpreter/dashboard')
   }

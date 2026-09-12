@@ -322,7 +322,11 @@ export function useSessionRealtime({
             type: 'new_request',
             payload: requestPayload,
           })
-          bc.close()
+          setTimeout(() => {
+            try {
+              bc.close()
+            } catch {}
+          }, 3000)
         } catch {}
       }
 

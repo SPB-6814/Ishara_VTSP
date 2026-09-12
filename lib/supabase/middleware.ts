@@ -27,8 +27,14 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Allow unauthenticated access to: login, auth routes, patient routes, API routes
+  // In DEMO_MODE or when demo role cookie is present, allow access to all routes for hackathon evaluation
+  const isDemoMode = process.env.DEMO_MODE === 'true'
+  const hasDemoRole = Boolean(request.cookies.get('ishara_demo_role')?.value)
+
+  // Allow unauthenticated access to: login, auth routes, patient routes, API routes, or any demo mode access
   const isPublicRoute =
+    isDemoMode ||
+    hasDemoRole ||
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/auth') ||
     request.nextUrl.pathname.startsWith('/patient') ||

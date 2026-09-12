@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -16,30 +16,17 @@ import {
 
 export default function LoginPage() {
   const router = useRouter()
-  const [isCreatingSession, setIsCreatingSession] = useState(false)
 
-  const handleStartDemoSession = async (role: 'patient' | 'staff') => {
-    setIsCreatingSession(true)
-    try {
-      const res = await fetch('/api/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patientDisplayName: 'Patient Bed 4A (Ramesh)',
-        }),
-      })
-      const data = await res.json()
-      const sessionId = data.session?.id || 'demo-session'
+  const handleStartDemoSession = (role: 'patient' | 'staff' | 'interpreter') => {
+    const demoCookieRole = role === 'staff' ? 'doctor' : role
+    document.cookie = `ishara_demo_role=${demoCookieRole}; path=/; max-age=86400; SameSite=Lax`
 
-      if (role === 'patient') {
-        router.push(`/patient/${sessionId}`)
-      } else {
-        router.push(`/dashboard/${sessionId}`)
-      }
-    } catch {
-      router.push(role === 'patient' ? '/patient/demo-session' : '/dashboard/demo-session')
-    } finally {
-      setIsCreatingSession(false)
+    if (role === 'patient') {
+      router.push('/patient/demo-session')
+    } else if (role === 'staff') {
+      router.push('/dashboard/demo-session')
+    } else {
+      router.push('/interpreter/dashboard')
     }
   }
 
@@ -154,7 +141,6 @@ export default function LoginPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Button
               onClick={() => handleStartDemoSession('patient')}
-              disabled={isCreatingSession}
               className="bg-[#084C5B] hover:bg-[#0D748A] text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2 shadow"
             >
               <Tablet className="w-4 h-4" />
@@ -163,7 +149,6 @@ export default function LoginPage() {
 
             <Button
               onClick={() => handleStartDemoSession('staff')}
-              disabled={isCreatingSession}
               variant="outline"
               className="border-slate-300 dark:border-slate-700 hover:bg-slate-100 font-bold h-12 rounded-xl flex items-center justify-center gap-2"
             >
@@ -172,7 +157,7 @@ export default function LoginPage() {
             </Button>
 
             <Button
-              onClick={() => router.push('/interpreter/dashboard')}
+              onClick={() => handleStartDemoSession('interpreter')}
               className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold h-12 rounded-xl flex items-center justify-center gap-2 shadow"
             >
               <Video className="w-4 h-4" />

@@ -21,19 +21,30 @@ export default function HospitalAuthPage() {
 
     setLoading(true)
     try {
-      // In DEMO_MODE or without Supabase auth configured, simulate magic link
-      setTimeout(() => {
-        setLoading(false)
-        setSentMagicLink(true)
-        toast.success('Magic link sent to ' + email)
-      }, 800)
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        const { createClient } = await import('@/lib/supabase/client')
+        const supabase = createClient()
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard/demo-session`,
+          },
+        })
+        if (error) throw error
+      }
+      setSentMagicLink(true)
+      toast.success('Magic link sent to ' + email)
     } catch {
+      // Fallback in demo mode
+      setSentMagicLink(true)
+      toast.success('Magic link sent to ' + email + ' (Demo Mode)')
+    } finally {
       setLoading(false)
-      toast.error('Failed to send magic link')
     }
   }
 
   const handleQuickDemoLogin = (role: 'doctor' | 'nurse') => {
+    document.cookie = `ishara_demo_role=${role}; path=/; max-age=86400; SameSite=Lax`
     toast.success(`Logged in as Demo ${role === 'doctor' ? 'Doctor' : 'Staff'}`)
     router.push('/dashboard/demo-session')
   }

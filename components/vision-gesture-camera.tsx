@@ -215,7 +215,7 @@ export function VisionGestureCamera({
     <div className={`flex flex-col gap-3 ${className}`}>
 
       {/* Camera card */}
-      <div className="relative rounded-xl overflow-hidden bg-gray-950 aspect-video w-full">
+      <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-video w-full border border-slate-200 dark:border-slate-800 shadow-inner">
 
         {/* Video */}
         <video
@@ -235,14 +235,14 @@ export function VisionGestureCamera({
 
         {/* Privacy shutter */}
         {!cameraOn && (
-          <div className="absolute inset-0 bg-gray-900 flex flex-col items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center">
-              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
+              <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
               </svg>
             </div>
-            <p className="text-gray-400 text-sm">Camera is off</p>
+            <p className="text-slate-400 text-sm font-medium">Camera is off</p>
           </div>
         )}
 
@@ -312,10 +312,10 @@ export function VisionGestureCamera({
         <button
           onClick={toggleCamera}
           disabled={!modelReady && !cameraOn}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs
             ${cameraOn
-              ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
-              : 'bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/30'}
+              ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 dark:border-red-500/30'
+              : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20 dark:border-green-500/30'}
             disabled:opacity-40 disabled:cursor-not-allowed`}
           aria-label={cameraOn ? 'Stop camera' : 'Start camera'}
         >
@@ -333,7 +333,7 @@ export function VisionGestureCamera({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
               </svg>
-              Start signing
+              Start signing / इशारा शुरू करें
             </>
           )}
         </button>
@@ -342,7 +342,7 @@ export function VisionGestureCamera({
         {wordBuffer.length > 0 && (
           <button
             onClick={() => setWordBuffer([])}
-            className="text-xs text-gray-400 hover:text-gray-200 transition-colors ml-auto"
+            className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors ml-auto"
           >
             Clear words
           </button>
@@ -356,7 +356,7 @@ export function VisionGestureCamera({
             <span
               key={i}
               role="listitem"
-              className="bg-blue-500/15 text-blue-300 text-xs px-2.5 py-1 rounded-full border border-blue-500/20"
+              className="bg-indigo-50 text-indigo-800 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs"
             >
               {word}
             </span>

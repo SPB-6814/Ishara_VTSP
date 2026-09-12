@@ -38,72 +38,53 @@ The project is divided across team members with zero overlap:
 |           VIBHAV (ME)              |                 TEJAS (TEAMMATE 1)               |
 |    Full-Stack, Realtime & UX       |         Vision AI & ISL Video Media Lead         |
 +------------------------------------+--------------------------------------------------+
-| 1. Fix Middleware & Demo Bypass    | 1. MediaPipe Tasks Vision Gesture Model (P3)     |
-| 2. Synchronize Demo Sessions       | 2. Clinical Sign Classifier (Debounce & Filter)  |
-| 3. Fix IPC & Realtime Signaling    | 3. Stream Recognized Signs to Realtime Pipeline  |
-| 4. Fix Postgres Events UUID Bug    | 4. Curate/Record Complete 44 ISL Video Clips     |
-| 5. Patient Kiosk 1-Tap Interp UX   | 5. Encode H.264/AAC & Place in public/videos/    |
-| 6. Doctor Station QR Tablet Pair   | 6. Upload Clips to Supabase Storage 'isl-clips'  |
-| 7. 60s Fallback Escalation Timer   | 7. Camera Privacy Shutter & Landmarker Overlay   |
-| 8. Interpreter Audio Chime Alarm   |                                                  |
+| 1. Fix Middleware & Demo Bypass [DONE] | 1. MediaPipe Tasks Vision Gesture Model (P3) |
+| 2. Synchronize Demo Sessions    [DONE] | 2. Clinical Sign Classifier (Debounce & Filter) |
+| 3. Fix IPC & Realtime Signaling [DONE] | 3. Stream Recognized Signs to Realtime Pipeline |
+| 4. Fix Postgres Events UUID Bug [DONE] | 4. Curate/Record Complete 44 ISL Video Clips    |
+| 5. Patient Kiosk 1-Tap Interp UX [DONE]| 5. Encode H.264/AAC & Place in public/videos/   |
+| 6. Doctor Station QR Tablet Pair [DONE]| 6. Upload Clips to Supabase Storage 'isl-clips' |
+| 7. 60s Fallback Escalation Timer [DONE]| 7. Camera Privacy Shutter & Landmarker Overlay  |
+| 8. Interpreter Audio Chime Alarm [DONE]|                                                 |
 +------------------------------------+--------------------------------------------------+
 * Note: Teammate 2 is independently developing the P2 AI Sign Video Fallback pipeline.
 ```
 
 ---
 
-## 3. Detailed Tasks for VIBHAV (Full-Stack, Realtime & UX)
+## 3. Detailed Tasks for VIBHAV (Full-Stack, Realtime & UX) - ALL COMPLETED (Commit bf1d181)
 
-### Task A1: Fix Middleware & Demo Mode Auth Bypass
-- **Files:** `lib/supabase/middleware.ts`, `proxy.ts`, `app/auth/hospital/page.tsx`, `app/auth/interpreter/page.tsx`
-- **Actions:**
-  1. In `lib/supabase/middleware.ts`, check `process.env.DEMO_MODE === 'true'`. If true, allow all routes (`/dashboard/*`, `/interpreter/*`, `/patient/*`) without redirecting to `/login`.
-  2. Support demo role cookies (`ishara_demo_role=doctor|interpreter`) when clicking "Demo Doctor" or "Demo Interpreter".
-  3. Implement `app/auth/callback/route.ts` with `exchangeCodeForSession` so real Supabase magic links also work.
+### Task A1: Fix Middleware & Demo Mode Auth Bypass [COMPLETED]
+- **Files:** `lib/supabase/middleware.ts`, `proxy.ts`, `app/auth/hospital/page.tsx`, `app/auth/interpreter/page.tsx`, `app/auth/callback/route.ts`
+- **Status:** Verified. `isDemoMode` (`process.env.DEMO_MODE === 'true'`) and `hasDemoRole` (`ishara_demo_role` cookie) bypass auth redirects. All routes (`/dashboard/*`, `/interpreter/*`, `/patient/*`) return 200 OK.
 
-### Task A2: Synchronize Demo Session IDs
+### Task A2: Synchronize Demo Session IDs [COMPLETED]
 - **File:** `app/login/page.tsx`
-- **Actions:**
-  1. Make "1. Open Patient Tablet Kiosk", "2. Open Staff Station", and "3. Open Interpreter Portal" all target the canonical shared session ID: `demo-session`.
-  2. Map `demo-session` to UUID `00000000-0000-0000-0000-000000000001` via `toValidSessionUuid`.
-  3. Guarantees that opening buttons across different tabs or devices connects all parties to the exact same WebRTC room and Supabase Realtime channel.
+- **Status:** Verified. All demo launcher buttons ("1. Open Patient Tablet Kiosk", "2. Open Staff Station", "3. Open Interpreter Portal") route to the canonical shared session ID: `demo-session`.
 
-### Task A3: Fix Realtime Signaling & Channel Teardown
+### Task A3: Fix Realtime Signaling & Channel Teardown [COMPLETED]
 - **Files:** `hooks/use-session-realtime.ts`, `app/interpreter/dashboard/page.tsx`
-- **Actions:**
-  1. Remove synchronous `bc.close()` immediately following `postMessage()` in `requestInterpreter` and `handleAcceptCall`.
-  2. Maintain persistent channel instances so browser IPC reliably delivers messages across tabs.
+- **Status:** Verified. Replaced premature synchronous `bc.close()` with delayed cleanup (`setTimeout(..., 3000)`), ensuring IPC messages are dispatched across all tabs.
 
-### Task A4: Fix PostgreSQL UUID Slug Syntax in Events API
+### Task A4: Fix PostgreSQL UUID Slug Syntax in Events API [COMPLETED]
 - **File:** `app/api/session/[id]/events/route.ts`
-- **Actions:**
-  1. In both `GET` and `POST`, wrap `id` with `toValidSessionUuid(id)`.
-  2. Prevents Postgres error `invalid input syntax for type uuid: "demo-session"` when logging or loading audit events.
+- **Status:** Verified. Wrapped session ID with `toValidSessionUuid(id)` in both `GET` and `POST`. Tested via curl, returns 200 OK.
 
-### Task A5: Patient Tablet Kiosk UX & Dedicated Interpreter Button
+### Task A5: Patient Tablet Kiosk UX & Dedicated Interpreter Button [COMPLETED]
 - **File:** `app/patient/[sessionId]/page.tsx`
-- **Actions:**
-  1. Add a prominent, 1-tap **"🤟 Request Live ISL Interpreter / अनुवादक बुलाएं"** card and header button directly on the patient screen (remove need to open staff drawer).
-  2. Display connection indicator showing "Nurse Station Online & Listening".
-  3. Prevent P0 pictograms from auto-launching missing video modals over the triage grid.
+- **Status:** Verified. Added 1-tap **"🤟 Request Live ISL Interpreter / अनुवादक बुलाएं"** card and header button. Added "Nurse Station Online" status pill. Removed auto-play of missing video files on P0 taps.
 
-### Task A6: Doctor Station QR Code Bedside Pairing
+### Task A6: Doctor Station QR Code Bedside Pairing [COMPLETED]
 - **File:** `app/dashboard/[sessionId]/page.tsx`
-- **Actions:**
-  1. Add a "Pair Bedside Tablet" button opening a clean modal with a dynamic QR code pointing to `http://<LAN_IP>:3000/patient/[sessionId]`.
-  2. Enables judges and clinicians to scan with an iPad or phone and immediately join the active patient session.
+- **Status:** Verified. Added "Pair Bedside Tablet" button opening a modal with a dynamic QR code pointing to `http://<LAN_IP>:3000/patient/[sessionId]`.
 
-### Task A7: 60-Second Auto-Fallback Escalation Timer
+### Task A7: 60-Second Auto-Fallback Escalation Timer [COMPLETED]
 - **File:** `app/dashboard/[sessionId]/page.tsx`
-- **Actions:**
-  1. When an interpreter is paged, start a 60-second countdown banner on the clinician monitor.
-  2. If no interpreter accepts within 60s, trigger an escalation alert and offer pre-recorded AI sign clips as an immediate fallback.
+- **Status:** Verified. When interpreter is paged, a 60s countdown banner runs on clinician monitor. Escalation triggers fallback recommendations if unaccepted.
 
-### Task A8: Interpreter Portal Audio-Visual Ring Chime
+### Task A8: Interpreter Portal Audio-Visual Ring Chime [COMPLETED]
 - **File:** `app/interpreter/dashboard/page.tsx`
-- **Actions:**
-  1. Play a repeating Web Audio alert chime when an incoming hospital emergency call is received.
-  2. Dynamically bind incoming calls to their real session ID so accepting connects to the exact patient room.
+- **Status:** Verified. Web Audio chime (853Hz + 960Hz) sounds upon incoming emergency call, with one-click acceptance routing into `/interpreter/call/[sessionId]`.
 
 ---
 

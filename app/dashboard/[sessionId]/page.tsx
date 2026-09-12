@@ -333,57 +333,7 @@ export default function DashboardPage() {
           onRequestInterpreter={handlePageInterpreter}
         />
 
-        {/* 60-Second Auto-Fallback Escalation Alert */}
-        {sessionStatus === 'interpreter_requested' && (
-          <div
-            role="status"
-            className={`w-full p-4 rounded-2xl border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md transition-all ${
-              escalationTriggered
-                ? 'bg-amber-50 border-amber-500 text-amber-950 dark:bg-amber-950/40 dark:border-amber-500 dark:text-amber-100'
-                : 'bg-indigo-50 border-indigo-400 text-indigo-950 dark:bg-indigo-950/40 dark:border-indigo-600 dark:text-indigo-100'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl shrink-0 ${escalationTriggered ? 'bg-amber-500 text-white' : 'bg-indigo-600 text-white'}`}>
-                {escalationTriggered ? <AlertTriangle className="w-5 h-5" /> : <Video className="w-5 h-5 animate-pulse" />}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[11px] font-black uppercase px-2 py-0.5 rounded text-white ${escalationTriggered ? 'bg-amber-600' : 'bg-indigo-600'}`}>
-                    {escalationTriggered ? 'Auto-Fallback Escalation' : 'Paging ISL Relay'}
-                  </span>
-                  {!escalationTriggered && countdownSeconds !== null && (
-                    <span className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300">
-                      Escalation in {countdownSeconds}s
-                    </span>
-                  )}
-                </div>
-                <h4 className="font-bold text-sm sm:text-base mt-0.5">
-                  {escalationTriggered
-                    ? 'No remote interpreter accepted within 60s. Auto-fallback recommended.'
-                    : 'Paging certified remote ISL interpreters. Standing by for connection...'}
-                </h4>
-                <p className="text-xs opacity-80">
-                  {escalationTriggered
-                    ? 'Recommend using the ISL Video Library (P2 AI Fallback) below to play pre-recorded sign clips on the patient tablet.'
-                    : 'The patient screen will automatically connect into 2-party HD video when an interpreter accepts.'}
-                </p>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handlePageInterpreter}
-                className="text-xs font-bold flex items-center gap-1 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Re-Page
-              </Button>
-            </div>
-          </div>
-        )}
 
         {/* Status Metrics Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

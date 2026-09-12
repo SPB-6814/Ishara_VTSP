@@ -68,7 +68,6 @@ export default function PatientPage() {
         if (prev <= 1) {
           clearInterval(timer)
           sendStatusChange('ai_fallback')
-          setCameraCardOpen(true)
           toast.warning('Live interpreter unavailable within 30s. Switched to AI Assisted Sign Interpreter (P3).')
           return 0
         }

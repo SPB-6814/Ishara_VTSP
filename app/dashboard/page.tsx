@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Copy,
   Check,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -371,12 +372,21 @@ export default function HospitalRosterPage() {
       <Dialog.Root open={isAdmitOpen} onOpenChange={setIsAdmitOpen}>
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 animate-in fade-in" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-2xl z-50 space-y-4">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-2xl z-50 space-y-4 relative">
+            <button
+              type="button"
+              onClick={() => setIsAdmitOpen(false)}
+              aria-label="Close dialog"
+              className="absolute top-4 right-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
             <Dialog.Title className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-              <Plus className="w-5 h-5 text-[#084C5B]" />
+              <Plus className="w-5 h-5 text-[#084C5B] dark:text-teal-400" />
               Admit New Bedside Patient
             </Dialog.Title>
-            <Dialog.Description className="text-xs text-slate-500">
+            <Dialog.Description className="text-xs text-slate-500 dark:text-slate-400">
               Create a new emergency session and generate a tablet pairing QR code for the bedside.
             </Dialog.Description>
 
@@ -406,7 +416,7 @@ export default function HospitalRosterPage() {
                       variant={priority === lvl ? 'default' : 'outline'}
                       onClick={() => setPriority(lvl)}
                       className={`h-9 text-xs font-bold rounded-xl ${
-                        priority === lvl ? 'bg-[#084C5B] text-white' : 'border-slate-300'
+                        priority === lvl ? 'bg-[#084C5B] text-white' : 'border-slate-300 dark:border-slate-700'
                       }`}
                     >
                       {lvl === 'P0' ? '🚨 P0 Critical' : lvl === 'P1' ? '⚠️ P1 Urgent' : 'ℹ️ P2 Routine'}
@@ -420,7 +430,7 @@ export default function HospitalRosterPage() {
                   type="button"
                   variant="ghost"
                   onClick={() => setIsAdmitOpen(false)}
-                  className="h-9 text-xs"
+                  className="h-9 text-xs font-bold text-slate-600 dark:text-slate-400"
                 >
                   Cancel
                 </Button>
@@ -441,12 +451,22 @@ export default function HospitalRosterPage() {
       <Dialog.Root open={isQROpen} onOpenChange={setIsQROpen}>
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 animate-in fade-in" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-2xl z-50 text-center space-y-4">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-2xl z-50 text-center space-y-4 relative">
+            <button
+              type="button"
+              onClick={() => setIsQROpen(false)}
+              aria-label="Close dialog"
+              className="absolute top-4 right-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
             <Dialog.Title className="text-lg font-black text-slate-900 dark:text-white flex items-center justify-center gap-2">
-              <QrCode className="w-5 h-5 text-teal-600" />
+              <QrCode className="w-5 h-5 text-teal-600 dark:text-teal-400" />
               Pair Bedside Tablet
             </Dialog.Title>
-            <Dialog.Description className="text-xs text-slate-500">
+            
+            <Dialog.Description className="text-xs text-slate-500 dark:text-slate-400">
               Scan with hospital iPad/tablet to launch the patient kiosk for:
               <span className="block font-bold text-slate-800 dark:text-slate-200 mt-1">
                 {selectedSession?.patient_display_name}
@@ -454,51 +474,66 @@ export default function HospitalRosterPage() {
             </Dialog.Description>
 
             {selectedSession && (
-              <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 inline-block shadow-sm">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-                    getTabletUrl(selectedSession.id)
-                  )}`}
-                  alt="Bedside Pairing QR"
-                  className="w-52 h-52 mx-auto"
-                />
+              <div className="p-3.5 bg-white dark:bg-slate-950 rounded-2xl border-2 border-slate-200 dark:border-slate-800 inline-block shadow-inner mx-auto">
+                <div className="p-2.5 bg-white rounded-xl shadow-xs">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                      getTabletUrl(selectedSession.id)
+                    )}`}
+                    alt="Bedside Pairing QR"
+                    className="w-48 h-48 sm:w-52 sm:h-52 mx-auto rounded-lg"
+                  />
+                </div>
               </div>
             )}
 
             {selectedSession && (
-              <div className="space-y-2 text-left">
-                <span className="text-[11px] font-bold text-slate-500 block">Bedside Pairing Link:</span>
-                <div className="flex items-center gap-1.5 p-2 rounded-xl bg-slate-100 dark:bg-slate-800 font-mono text-xs overflow-hidden">
-                  <span className="truncate flex-1 text-slate-700 dark:text-slate-300">
+              <div className="space-y-1.5 text-left">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block uppercase tracking-wider">
+                  Bedside Pairing Link:
+                </span>
+                <div className="flex items-center gap-1.5 p-1.5 pl-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 font-mono text-xs overflow-hidden">
+                  <span className="truncate flex-1 text-slate-700 dark:text-slate-300 select-all">
                     {getTabletUrl(selectedSession.id)}
                   </span>
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
                     onClick={() => handleCopy(getTabletUrl(selectedSession.id))}
-                    className="h-7 w-7 p-0 shrink-0"
+                    className="h-7 px-2 text-xs font-bold shrink-0 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600 mr-1" />
+                        <span className="text-emerald-600 font-bold">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                        <span>Copy</span>
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-2 pt-2">
+            <div className="grid grid-cols-2 gap-3 pt-2">
               <Button
                 variant="outline"
                 onClick={() => setIsQROpen(false)}
-                className="w-full text-xs h-9 font-bold"
+                className="w-full text-xs h-9 font-bold border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
               >
                 Close
               </Button>
               {selectedSession && (
                 <Button
                   onClick={() => window.open(getTabletUrl(selectedSession.id), '_blank')}
-                  className="w-full text-xs h-9 font-bold bg-[#084C5B] hover:bg-[#0D748A] text-white"
+                  className="w-full text-xs h-9 font-bold bg-[#084C5B] hover:bg-[#0D748A] text-white rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
                 >
-                  Open in New Tab
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open in New Tab</span>
                 </Button>
               )}
             </div>

@@ -585,21 +585,21 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-3 pt-2">
             <Button
               onClick={handleCopyTabletUrl}
               variant="outline"
-              className="flex-1 text-xs font-bold flex items-center justify-center gap-1.5"
+              className="w-full text-xs h-9 font-bold rounded-xl border-slate-300 dark:border-slate-700 flex items-center justify-center gap-1.5"
             >
-              {copiedUrl ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-              {copiedUrl ? 'Copied!' : 'Copy Link'}
+              {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedUrl ? 'Copied!' : 'Copy Link'}</span>
             </Button>
             <Button
               onClick={() => window.open(tabletUrl, '_blank')}
-              className="flex-1 bg-[#084C5B] hover:bg-[#0D748A] text-white text-xs font-bold flex items-center justify-center gap-1.5"
+              className="w-full bg-[#084C5B] hover:bg-[#0D748A] text-white text-xs h-9 font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <ExternalLink className="w-4 h-4" />
-              Open Tablet
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Open Tablet</span>
             </Button>
           </div>
         </DialogContent>

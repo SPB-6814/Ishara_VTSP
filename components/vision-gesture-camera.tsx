@@ -217,12 +217,61 @@ export function VisionGestureCamera({
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className={`flex flex-col gap-3 ${className}`}>
+    <div className={`flex flex-col gap-2.5 ${className}`}>
+      {/* YouTube-style Subscreen Container */}
+      <div className="relative rounded-2xl overflow-hidden border-2 border-teal-500/40 bg-slate-950 shadow-2xl transition-all duration-300 w-full aspect-video sm:aspect-[16/9] max-h-[380px]">
+        {/* Top Header Overlay Bar */}
+        <div className="absolute top-0 left-0 right-0 z-20 px-3 py-2 bg-gradient-to-b from-black/90 via-black/50 to-transparent flex items-center justify-between text-white text-xs">
+          <div className="flex items-center gap-2">
+            <div
+              className={`w-2.5 h-2.5 rounded-full ${
+                cameraOn ? 'bg-emerald-400 animate-ping' : 'bg-rose-500'
+              }`}
+            />
+            <span className="font-extrabold text-[12px] tracking-wide text-white flex items-center gap-1.5">
+              <span>Vision Sign AI Live</span>
+              <span className="text-[10px] uppercase px-1.5 py-0.2 font-mono bg-teal-900/60 border border-teal-500/40 text-teal-300 rounded">
+                24 ISL Signs
+              </span>
+            </span>
+            {!modelReady && !initError && (
+              <span className="text-[10px] text-amber-300 bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded-full animate-pulse">
+                Loading Model…
+              </span>
+            )}
+          </div>
 
-      {/* Camera card */}
-      <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-video w-full border border-slate-200 dark:border-slate-800 shadow-inner">
+          <div className="flex items-center gap-2">
+            {/* Eye privacy toggle button */}
+            <button
+              type="button"
+              onClick={toggleCamera}
+              disabled={!modelReady && !cameraOn}
+              title={cameraOn ? 'Turn Off Camera Shutter' : 'Turn On Sign Camera'}
+              aria-label={cameraOn ? 'Turn Off Camera' : 'Turn On Camera'}
+              className="h-8 px-2.5 rounded-lg bg-black/60 hover:bg-black/80 border border-white/20 text-white flex items-center gap-1.5 transition-all disabled:opacity-50"
+            >
+              {cameraOn ? (
+                <>
+                  <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  <span className="text-[11px] font-bold">Camera On</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                  </svg>
+                  <span className="text-[11px] font-bold">Camera Off</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
 
-        {/* Video */}
+        {/* Video feed */}
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover scale-x-[-1]"
@@ -231,26 +280,46 @@ export function VisionGestureCamera({
           aria-label="Patient sign language camera feed"
         />
 
-        {/* Skeleton overlay */}
+        {/* MediaPipe 21-joint skeleton canvas overlay */}
         <canvas
           ref={canvasRef}
           className="absolute inset-0 w-full h-full scale-x-[-1] pointer-events-none"
           aria-hidden
         />
 
-        {/* Privacy shutter */}
+        {/* Privacy Shutter: Dark frame when camera is OFF */}
         {!cameraOn && (
-          <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
-              <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+          <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-4 text-center space-y-3 z-10">
+            <div className="p-3.5 rounded-full bg-slate-900 border-2 border-slate-800 text-slate-400 shadow-inner">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
               </svg>
             </div>
-            <p className="text-slate-400 text-sm font-medium">Camera is off</p>
+            <div>
+              <h4 className="text-sm font-bold text-slate-200 flex items-center justify-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />
+                Camera Shutter Closed
+              </h4>
+              <p className="text-[11px] text-slate-400 max-w-sm mt-0.5 leading-relaxed">
+                Hardware feed paused for patient privacy. Click &ldquo;Turn On Camera&rdquo; to start gesture triage.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={startCamera}
+              disabled={!modelReady}
+              className="bg-[#084C5B] hover:bg-[#0D748A] text-white font-bold text-xs h-9 px-5 rounded-xl shadow-md flex items-center gap-2 transition-all disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 text-teal-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <span>Turn On Sign Detection Camera</span>
+            </button>
           </div>
         )}
 
+<<<<<<< HEAD
         {/* Top-left: face + hand tracking indicator when camera is active */}
         {cameraOn && (
           <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
@@ -274,123 +343,99 @@ export function VisionGestureCamera({
         )}
 
         {/* Top-right: confidence ring + label */}
+=======
+        {/* Live HUD Pill (active gesture + confidence ring) */}
+>>>>>>> 058a4ada457bcec6e44c45fc22205693e8f494a7
         {cameraOn && (
-          <div className="absolute top-3 right-3 flex items-center gap-2">
-            {/* Progress ring */}
-            <svg width="36" height="36" aria-hidden>
-              <circle cx="18" cy="18" r={ringR} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3"/>
-              <circle
-                cx="18" cy="18" r={ringR}
-                fill="none"
-                stroke={pendingConf >= 1 ? '#4ade80' : '#f59e0b'}
-                strokeWidth="3"
-                strokeDasharray={ringC}
-                strokeDashoffset={ringOffset}
-                strokeLinecap="round"
-                transform="rotate(-90 18 18)"
-                style={{ transition: 'stroke-dashoffset 0.1s linear, stroke 0.2s' }}
-              />
-            </svg>
+          <div className="absolute top-12 left-3 right-3 z-10 flex items-center justify-between pointer-events-none">
+            {lastGesture ? (
+              <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-900/90 backdrop-blur-md border border-teal-400/80 text-white shadow-lg animate-in fade-in">
+                <div className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-teal-300 block leading-tight tracking-wider">
+                    Sign Detected
+                  </span>
+                  <span className="text-xs font-black text-white">{lastGesture.displayText}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="px-2.5 py-1 rounded-lg bg-black/50 backdrop-blur-xs border border-white/10 text-slate-300 text-[11px]">
+                Waiting for sign gestures…
+              </div>
+            )}
 
-            {/* Gesture label pill */}
-            {lastGesture && (
-              <span className="bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-                {lastGesture.displayText}
-                <span className="ml-1 opacity-60">
+            {/* Confidence ring SVG */}
+            <div className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-2 py-1 rounded-xl border border-white/20">
+              <svg width="32" height="32" aria-hidden>
+                <circle cx="16" cy="16" r={ringR} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
+                <circle
+                  cx="16"
+                  cy="16"
+                  r={ringR}
+                  fill="none"
+                  stroke={pendingConf >= 1 ? '#10b981' : '#f59e0b'}
+                  strokeWidth="3"
+                  strokeDasharray={ringC}
+                  strokeDashoffset={ringOffset}
+                  strokeLinecap="round"
+                  transform="rotate(-90 16 16)"
+                  style={{ transition: 'stroke-dashoffset 0.1s linear, stroke 0.2s' }}
+                />
+              </svg>
+              {lastGesture && (
+                <span className="text-[11px] font-mono font-bold text-teal-300">
                   {Math.round(lastGesture.confidence * 100)}%
                 </span>
-              </span>
-            )}
+              )}
+            </div>
           </div>
         )}
 
-        {/* Flash confirmation overlay */}
+        {/* Flash banner when gesture is confirmed */}
         {flashLabel && (
-          <div className="absolute bottom-16 left-0 right-0 flex justify-center pointer-events-none">
-            <span className="bg-green-500/90 text-white text-lg font-medium px-4 py-2 rounded-full backdrop-blur-sm animate-pulse">
-              {flashLabel}
-            </span>
+          <div className="absolute bottom-4 left-3 right-3 flex justify-center pointer-events-none z-20 animate-in slide-in-from-bottom-2">
+            <div className="bg-emerald-600/95 text-white text-xs font-black px-4 py-2 rounded-xl shadow-xl flex items-center gap-2 border border-emerald-300/40">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Broadcasted: &ldquo;{flashLabel}&rdquo; → Sent to Doctor</span>
+            </div>
           </div>
         )}
 
-        {/* Model loading indicator */}
-        {!modelReady && !initError && (
-          <div className="absolute top-3 left-3">
-            <span className="bg-amber-500/80 text-white text-xs px-2 py-1 rounded-full">
-              Loading model…
-            </span>
-          </div>
-        )}
-
-        {/* Error */}
+        {/* Error message */}
         {initError && (
-          <div className="absolute top-3 left-3 right-3">
-            <span className="bg-red-500/80 text-white text-xs px-2 py-1 rounded-md block text-center">
-              {initError}
-            </span>
+          <div className="absolute inset-0 z-30 bg-slate-950/90 flex flex-col items-center justify-center p-4 text-center text-rose-300 text-xs space-y-2">
+            <span className="font-bold text-sm">Camera Notice</span>
+            <p>{initError}</p>
           </div>
         )}
       </div>
 
-      {/* Controls row */}
-      <div className="flex items-center gap-3">
-
-        {/* Privacy toggle */}
-        <button
-          onClick={toggleCamera}
-          disabled={!modelReady && !cameraOn}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs
-            ${cameraOn
-              ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-300 dark:bg-red-500/10 dark:text-red-400 dark:hover:bg-red-500/20 dark:border-red-500/30'
-              : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 dark:bg-green-500/10 dark:text-green-400 dark:hover:bg-green-500/20 dark:border-green-500/30'}
-            disabled:opacity-40 disabled:cursor-not-allowed`}
-          aria-label={cameraOn ? 'Stop camera' : 'Start camera'}
-        >
-          {cameraOn ? (
-            <>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-              </svg>
-              Stop camera
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-              </svg>
-              Start signing / इशारा शुरू करें
-            </>
-          )}
-        </button>
-
-        {/* Clear word buffer */}
-        {wordBuffer.length > 0 && (
-          <button
-            onClick={() => setWordBuffer([])}
-            className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors ml-auto"
-          >
-            Clear words
-          </button>
-        )}
-      </div>
-
-      {/* Word buffer chips */}
+      {/* Word buffer chips below camera */}
       {wordBuffer.length > 0 && (
-        <div className="flex flex-wrap gap-1.5" role="list" aria-label="Detected words">
-          {wordBuffer.map((word, i) => (
-            <span
-              key={i}
-              role="listitem"
-              className="bg-indigo-50 text-indigo-800 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800 text-xs px-2.5 py-1 rounded-full font-bold shadow-2xs"
-            >
-              {word}
-            </span>
-          ))}
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1.5 flex-wrap flex-1" role="list" aria-label="Detected words">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Session Signs:</span>
+            {wordBuffer.map((word, i) => (
+              <span
+                key={i}
+                role="listitem"
+                className="bg-teal-500/15 text-teal-700 dark:text-teal-300 text-xs px-2.5 py-0.5 rounded-full border border-teal-500/30 font-semibold"
+              >
+                {word}
+              </span>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setWordBuffer([])}
+            className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors ml-2 shrink-0 underline"
+          >
+            Clear
+          </button>
         </div>
       )}
-
     </div>
   )
 }

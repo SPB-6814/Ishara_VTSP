@@ -19,73 +19,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
-// ─── Collapsible sign-language camera card ──────────────────────────────────────────
-
-function GestureCameraCard({
-  sendGestureText,
-  isOpen,
-  onOpenChange,
-}: {
-  sendGestureText: (text: string, confidence: number) => void
-  isOpen: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition-all duration-200">
-      {/* Header / toggle */}
-      <button
-        onClick={() => onOpenChange(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
-        aria-expanded={isOpen}
-        aria-controls="gesture-camera-panel"
-      >
-        <div className="flex items-center gap-3">
-          {/* Hand icon */}
-          <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800/50 text-purple-700 dark:text-purple-300">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/>
-            </svg>
-          </div>
-          <div className="text-left">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-black text-slate-900 dark:text-white">
-                Sign Language Recognition (P3) / सांकेतिक भाषा कैमरा
-              </span>
-              <span className="text-[11px] font-bold text-purple-700 bg-purple-100 border border-purple-200 dark:text-purple-300 dark:bg-purple-500/20 dark:border-purple-500/30 px-2 py-0.5 rounded-full">
-                ISL AI
-              </span>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Real-time MediaPipe hand gesture AI translation
-            </p>
-          </div>
-        </div>
-
-        {/* Chevron */}
-        <svg
-          className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          fill="none" viewBox="0 0 24 24" stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
-        </svg>
-      </button>
-
-      {/* Collapsible camera panel */}
-      {isOpen && (
-        <div id="gesture-camera-panel" className="px-4 pb-4 border-t border-slate-100 dark:border-slate-800/80 pt-3">
-          <p className="text-xs text-slate-600 dark:text-slate-400 mb-3 font-medium">
-            Position your hands in front of the camera and perform a sign. The doctor will see your message instantly.
-          </p>
-          <VisionGestureCamera
-            sendGestureText={sendGestureText}
-            className="w-full"
-          />
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─── Patient kiosk page ────────────────────────────────────────────────────────────
 
@@ -98,7 +31,6 @@ export default function PatientPage() {
   const [showingConfirmation, setShowingConfirmation] = useState(false)
   const [bedName, setBedName] = useState('Bedside Kiosk (ISL)')
   const [fallbackCountdown, setFallbackCountdown] = useState<number>(30)
-  const [cameraCardOpen, setCameraCardOpen] = useState(false)
 
   useEffect(() => {
     fetch(`/api/session?id=${sessionId}`)
@@ -136,7 +68,6 @@ export default function PatientPage() {
         if (prev <= 1) {
           clearInterval(timer)
           sendStatusChange('ai_fallback')
-          setCameraCardOpen(true)
           toast.warning('Live interpreter unavailable within 30s. Switched to AI Assisted Sign Interpreter (P3).')
           return 0
         }
@@ -395,6 +326,36 @@ export default function PatientPage() {
           </div>
         )}
 
+        {/* P3 — Core Feature: AI Sign Language Recognition Camera Subscreen */}
+        <section
+          aria-label="Indian Sign Language gesture recognition"
+          className="w-full max-w-2xl mx-auto rounded-3xl bg-white dark:bg-slate-900 border-2 border-teal-600/30 dark:border-teal-500/30 p-4 sm:p-5 shadow-xl transition-all"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 text-[#084C5B] dark:text-teal-300">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                    d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>ISL AI Sign Recognition</span>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-900 dark:bg-teal-900/60 dark:text-teal-300 border border-teal-300 dark:border-teal-700">
+                    AI सांकेतिक भाषा
+                  </span>
+                </h2>
+              </div>
+            </div>
+          </div>
+
+          <VisionGestureCamera
+            sendGestureText={sendGestureText}
+            className="w-full"
+          />
+        </section>
+
         {/* Pictogram Grid (P0) */}
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-2">
@@ -406,13 +367,6 @@ export default function PatientPage() {
 
           <PictogramGrid onTriggerAlert={handleTriggerAlert} />
         </div>
-
-        {/* Sign Language Camera Card (P3 — ISL gesture recognition) */}
-        <GestureCameraCard
-          sendGestureText={sendGestureText}
-          isOpen={cameraCardOpen}
-          onOpenChange={setCameraCardOpen}
-        />
       </div>
 
       {/* ISL Video Player Modal (Triggered automatically when clip received) */}

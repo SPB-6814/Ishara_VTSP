@@ -50,17 +50,6 @@ export default function LoginPage() {
           <p className="text-base sm:text-xl text-slate-600 dark:text-slate-300 max-w-xl mx-auto font-medium">
             Clinical Communication Platform for Deaf & Mute Indian Sign Language Patients
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300">
-              🚨 P0 Pictogram Emergency Triage
-            </span>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300">
-              🎥 P1 Live ISL Video Relay Call
-            </span>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-              🤖 P2 AI Sign Video Fallback
-            </span>
-          </div>
         </div>
 
         {/* The Portals Grid */}

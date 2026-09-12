@@ -129,7 +129,7 @@ export function EmergencyAlertBanner({
             variant="outline"
             size="sm"
             onClick={onAcknowledge}
-            className="border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 hover:bg-white text-xs font-bold flex items-center gap-1.5"
+            className="border-slate-300 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5"
           >
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
             Acknowledge

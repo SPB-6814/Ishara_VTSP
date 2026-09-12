@@ -426,7 +426,7 @@ export default function HospitalRosterPage() {
       <Dialog.Root open={isAdmitOpen} onOpenChange={setIsAdmitOpen}>
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 animate-in fade-in" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-2xl z-50 space-y-4 relative">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-2xl z-50 space-y-4">
             <button
               type="button"
               onClick={() => setIsAdmitOpen(false)}
@@ -505,7 +505,7 @@ export default function HospitalRosterPage() {
       <Dialog.Root open={isQROpen} onOpenChange={setIsQROpen}>
         <Dialog.Portal>
           <Dialog.Backdrop className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 animate-in fade-in" />
-          <Dialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-2xl z-50 text-center space-y-4 relative">
+          <Dialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] max-w-md max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-2xl z-50 text-center space-y-4">
             <button
               type="button"
               onClick={() => setIsQROpen(false)}
@@ -528,15 +528,15 @@ export default function HospitalRosterPage() {
             </Dialog.Description>
 
             {selectedSession && (
-              <div className="p-3.5 bg-white dark:bg-slate-950 rounded-2xl border-2 border-slate-200 dark:border-slate-800 inline-block shadow-inner mx-auto">
-                <div className="p-2.5 bg-white rounded-xl shadow-xs">
+              <div className="p-3 bg-white dark:bg-slate-950 rounded-2xl border-2 border-slate-200 dark:border-slate-800 inline-block shadow-inner mx-auto">
+                <div className="p-2 bg-white rounded-xl shadow-xs">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
                       getTabletUrl(selectedSession.id)
                     )}`}
                     alt="Bedside Pairing QR"
-                    className="w-48 h-48 sm:w-52 sm:h-52 mx-auto rounded-lg"
+                    className="w-40 h-40 sm:w-44 sm:h-44 mx-auto rounded-lg"
                   />
                 </div>
               </div>

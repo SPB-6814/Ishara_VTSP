@@ -211,16 +211,17 @@ export default function PatientPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
-                Connecting...
-              </span>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="hidden sm:inline-flex items-center gap-2 px-3.5 h-10 rounded-xl bg-amber-100/90 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs font-extrabold shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                <span>Connecting...</span>
+              </div>
               <Button
                 variant="outline"
                 onClick={handleCancelInterpreter}
-                className="bg-white/90 dark:bg-slate-900 border-amber-600 dark:border-amber-400 text-amber-950 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-slate-800 font-extrabold text-xs sm:text-sm h-10 px-4 rounded-xl flex items-center gap-1.5 shadow-sm"
+                className="h-10 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:border-red-400 dark:hover:border-red-500/80 transition-all flex items-center gap-1.5 shadow-xs"
               >
-                <X className="w-4 h-4 text-red-600" />
+                <X className="w-4 h-4" />
                 <span>Cancel / रद्द करें</span>
               </Button>
             </div>
@@ -277,7 +278,7 @@ export default function PatientPage() {
               variant="outline"
               size="sm"
               onClick={() => setShowingConfirmation(false)}
-              className="border-white/40 bg-white/10 hover:bg-white text-white hover:text-emerald-800 shrink-0 font-bold"
+              className="border-white/40 bg-white/10 hover:bg-white/20 text-white hover:text-white shrink-0 font-bold"
             >
               Dismiss
             </Button>

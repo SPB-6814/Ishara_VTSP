@@ -39,7 +39,7 @@ export default function DashboardPage() {
     events,
     clearAlert,
     sendPlayClip,
-    sendStatusChange,
+    requestInterpreter,
   } = useSessionRealtime({
     sessionId,
   })
@@ -107,14 +107,11 @@ export default function DashboardPage() {
 
   const handlePageInterpreter = () => {
     setIsPagingInterpreter(true)
-    sendStatusChange('interpreter_requested')
-
-    fetch(`/api/session/${sessionId}/request-interpreter`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note: 'Staff station remote paging' }),
-    }).catch(() => {})
-
+    requestInterpreter({
+      hospitalName: 'Ishara Demo Hospital',
+      patientName: patientDisplayName,
+      note: 'Staff station remote paging',
+    })
     toast.info('Paging ISL interpreters...')
     setTimeout(() => setIsPagingInterpreter(false), 2500)
   }

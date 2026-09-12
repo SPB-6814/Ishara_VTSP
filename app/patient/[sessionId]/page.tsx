@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { PictogramGrid } from '@/components/pictogram-grid'
 import { ISLVideoPlayer } from '@/components/isl-video-player'
 import { StaffControlsDrawer } from '@/components/staff-controls-drawer'
+import { LiveKitVideoCall } from '@/components/livekit-video-call'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import type { DetailedPictogram } from '@/lib/pictograms'
 import {
@@ -32,6 +33,7 @@ export default function PatientPage() {
     sendPlayClip,
     clearClip,
     sendStatusChange,
+    requestInterpreter,
   } = useSessionRealtime({
     sessionId,
   })
@@ -62,12 +64,12 @@ export default function PatientPage() {
   }
 
   const handleRequestInterpreter = () => {
-    sendStatusChange('interpreter_requested')
-    fetch(`/api/session/${sessionId}/request-interpreter`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note: 'Bedside request from patient tablet' }),
-    }).catch(() => {})
+    requestInterpreter({
+      hospitalName: 'Ishara Demo Hospital (ICU Bed 4)',
+      patientName: 'Patient Bedside (ISL)',
+      note: 'Bedside request from patient tablet',
+    })
+    toast.info('Paging ISL interpreter...')
   }
 
   return (
@@ -158,34 +160,34 @@ export default function PatientPage() {
           </div>
         )}
 
-        {/* Live Interpreter Video Window (if connected) */}
+        {/* Live Interpreter Video Window (Direct Embedded WebRTC) */}
         {sessionStatus === 'interpreter_connected' && (
-          <div className="w-full p-4 rounded-2xl bg-indigo-900 text-white shadow-xl border-2 border-indigo-400 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-indigo-800 flex items-center justify-center shrink-0">
-                <Video className="w-6 h-6 text-indigo-300 animate-pulse" />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">
-                  Active Video Connection
+          <div className="w-full rounded-2xl overflow-hidden bg-slate-950 border-4 border-indigo-500 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-indigo-950 px-4 py-2 border-b border-indigo-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Video className="w-4 h-4 text-indigo-300 animate-pulse" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Live ISL Interpreter Relay Connected • लाइव वीडियो अनुवादक जुड़ा हुआ है
                 </span>
-                <h3 className="text-lg font-black">
-                  ISL Interpreter Connected
-                </h3>
-                <p className="text-xs text-indigo-200">
-                  Doctor and remote interpreter are relaying in real time.
-                </p>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => sendStatusChange('active')}
+                className="h-7 text-xs border-indigo-400 bg-indigo-900/80 text-white hover:bg-indigo-800 font-bold"
+              >
+                Disconnect Call
+              </Button>
             </div>
-
-            <Button
-              onClick={() => {
-                window.open(`/interpreter/call/${sessionId}`, '_blank')
-              }}
-              className="bg-white text-indigo-950 hover:bg-indigo-100 font-bold px-4 shadow"
-            >
-              Open Fullscreen Video
-            </Button>
+            <div className="h-[360px] sm:h-[420px] w-full">
+              <LiveKitVideoCall
+                roomName={sessionId}
+                participantName="Patient (Bed 4A)"
+                participantIdentity={`patient-${sessionId.slice(0, 6)}`}
+                role="patient"
+                onDisconnect={() => sendStatusChange('active')}
+              />
+            </div>
           </div>
         )}
 

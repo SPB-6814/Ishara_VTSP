@@ -12,7 +12,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { INTERPRETER_REQUESTS_CHANNEL, REALTIME_EVENTS } from '@/lib/realtime'
+import {
+  INTERPRETER_REQUESTS_CHANNEL,
+  REALTIME_EVENTS,
+  getSessionChannel,
+} from '@/lib/realtime'
 import { createClient } from '@/lib/supabase/client'
 
 interface IncomingRequest {
@@ -100,7 +104,46 @@ export default function InterpreterDashboard() {
   const handleAcceptCall = async (req: IncomingRequest) => {
     toast.success(`Connecting to ${req.patientName}...`)
 
-    // Notify backend
+    const statusPayload = {
+      type: 'status_change',
+      sessionId: req.sessionId,
+      newStatus: 'interpreter_connected',
+      timestamp: new Date().toISOString(),
+    }
+
+    // 1. Local BroadcastChannel for same-machine tabs
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel(`ishara_session_${req.sessionId}`)
+        bc.postMessage({
+          type: REALTIME_EVENTS.STATUS_CHANGE,
+          payload: statusPayload,
+        })
+        bc.close()
+      }
+    } catch {}
+
+    // 2. Supabase Realtime Channel for remote devices
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        const supabase = createClient()
+        const sessChannel = supabase.channel(getSessionChannel(req.sessionId))
+        sessChannel.subscribe((subStatus: string) => {
+          if (subStatus === 'SUBSCRIBED') {
+            sessChannel.send({
+              type: 'broadcast',
+              event: REALTIME_EVENTS.STATUS_CHANGE,
+              payload: statusPayload,
+            })
+          }
+        })
+      }
+    } catch {}
+
+    // 3. Remove from pending requests
+    setRequests((prev) => prev.filter((r) => r.id !== req.id))
+
+    // 4. Notify backend database
     fetch(`/api/session/${req.sessionId}/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -110,7 +153,7 @@ export default function InterpreterDashboard() {
       }),
     }).catch(() => {})
 
-    // Route to video call view
+    // 5. Route to video call view
     router.push(`/interpreter/call/${req.sessionId}`)
   }
 

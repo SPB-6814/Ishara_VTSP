@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { getSessionChannel, REALTIME_EVENTS } from '@/lib/realtime'
+import {
+  getSessionChannel,
+  REALTIME_EVENTS,
+  INTERPRETER_REQUESTS_CHANNEL,
+} from '@/lib/realtime'
 import type {
   PictogramAlertPayload,
   PlayClipPayload,
@@ -281,8 +285,82 @@ export function useSessionRealtime({
       }
 
       setSessionStatus(newStatus)
+
+      // Notify database status API to keep state persisted
+      fetch(`/api/session/${sessionId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: newStatus,
+          activeMode: newStatus === 'interpreter_connected' ? 'live_interpreter' : 'pictogram',
+        }),
+      }).catch(() => {})
     },
     [sessionId]
+  )
+
+  /** Broadcast an interpreter request across the hospital and to all interpreters */
+  const requestInterpreter = useCallback(
+    async (options?: { hospitalName?: string; patientName?: string; note?: string }) => {
+      // 1. Update session status to interpreter_requested
+      sendStatusChange('interpreter_requested')
+
+      const requestPayload = {
+        id: `req-${Date.now()}`,
+        sessionId,
+        hospitalName: options?.hospitalName || 'Ishara Demo Hospital',
+        patientName: options?.patientName || 'Bedside Patient (ISL)',
+        note: options?.note || 'Urgent clinician bedside request',
+        requestedAt: new Date().toLocaleTimeString(),
+      }
+
+      // 2. Broadcast to local interpreter requests channel
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('ishara_global_interpreter_requests')
+          bc.postMessage({
+            type: 'new_request',
+            payload: requestPayload,
+          })
+          bc.close()
+        } catch {}
+      }
+
+      // 3. Broadcast to Supabase Realtime channel for interpreters
+      try {
+        if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          const supabase = createClient()
+          const interpChannel = supabase.channel(INTERPRETER_REQUESTS_CHANNEL)
+          interpChannel.subscribe((subStatus: string) => {
+            if (subStatus === 'SUBSCRIBED') {
+              interpChannel.send({
+                type: 'broadcast',
+                event: REALTIME_EVENTS.NEW_REQUEST,
+                payload: requestPayload,
+              })
+            }
+          })
+        }
+      } catch (err) {
+        console.warn('Realtime interpreter broadcast error:', err)
+      }
+
+      // 4. Persist to API
+      try {
+        await fetch(`/api/session/${sessionId}/request-interpreter`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            note: options?.note || 'Urgent clinician bedside request',
+            hospitalName: options?.hospitalName,
+            patientName: options?.patientName,
+          }),
+        })
+      } catch (err) {
+        console.warn('API interpreter request error:', err)
+      }
+    },
+    [sessionId, sendStatusChange]
   )
 
   const clearAlert = useCallback(() => {
@@ -302,6 +380,7 @@ export function useSessionRealtime({
     sendPictogramAlert,
     sendPlayClip,
     sendStatusChange,
+    requestInterpreter,
     clearAlert,
     clearClip,
     setEvents,

@@ -1,99 +1,77 @@
-### Verification of Your API Keys & Supabase Database
+# Ishara (VTSP) Project Status & Handoff
 
-  Your .env.local credentials have been verified and tested:
+### Current Architecture & Infrastructure Status
 
-  1. Supabase Database: Connected and verified.
-      • public.hospitals: Populated with Ishara Demo Hospital.
-      • public.isl_clips: All 44 sign language clips and aliases are loaded in PostgreSQL.
-  2. Supabase Storage:
-      • The isl-clips storage bucket has been created as a public bucket.
-  3. LiveKit Cloud:
-      • Connected to wss://ishara-o5m31j5u.livekit.cloud. Token generation tested and verified.
+1. **Supabase Database & Realtime**:
+   - **PostgreSQL Database**: Connected to project `paaatkjykvnmgghbqesk.supabase.co`.
+   - **Tables Seeded**: `hospitals` (Ishara Demo Hospital), `isl_clips` (44 medical sign phrases), `sessions`, `session_events`, `interpreter_presence`.
+   - **DDL Migration Applied**: `sessions.created_by` set to nullable so unauthenticated patient kiosks and rapid emergency bedside tablets can create and update sessions without auth blockers.
+   - **Session UUID Normalizer**: Non-UUID slugs (such as `demo-session`) are automatically mapped via `toValidSessionUuid` to canonical UUID `00000000-0000-0000-0000-000000000001` for PostgreSQL foreign key constraints.
+   - **Realtime Broadcast**: Multi-device cross-network signaling verified via Supabase channels (`session:{id}`, `interpreter-requests`) with same-browser `BroadcastChannel` fallback.
+   - **Supabase Storage**: `isl-clips` public storage bucket created and verified.
 
-  ──────
-  ### Division of Remaining Next Steps (From milestone1.md)
+2. **LiveKit WebRTC Cloud Infrastructure**:
+   - **Server**: Connected to `wss://ishara-o5m31j5u.livekit.cloud`.
+   - **Token Minting**: Production API endpoint `/api/livekit-token` issues HMAC-SHA256 encrypted JWT access tokens with granular publisher/subscriber video grants.
 
-  Based on milestone1.md, the remaining work is divided into 4 focused phases:
-  ──────
-  │ Diagram exceeds terminal width (505 > 150 cols)
-  │ Displayed as code block. Widen terminal to view inline.
+---
 
-    flowchart TD
-        subgraph Phase1 ["Phase 1: Real-Time Communication & LiveKit (P1)"]
-            LK["Wire @livekit/components-react\n(Real 2-party WebRTC on Patient & Interpreter)"]
-            RT["Enable multi-device Supabase Realtime\n(Sync across physical tablet and laptop)"]
-        end
+### Phase Progress Breakdown
 
-        subgraph Phase2 ["Phase 2: Vision Sign Recognition (P3)"]
-            MP["Install @mediapipe/tasks-vision\n(Client-side WASM Hand Tracking)"]
-            Cam["Live Landmark Skeleton Canvas on Tablet"]
-            Clas["Gesture Classifier (Help, Pain, Yes, No, 1-5)"]
-            TTS["Staff Station Audio TTS Readout"]
-        end
+```mermaid
+flowchart TD
+    subgraph Phase1 ["Phase 1: Real-Time WebRTC & Cross-Device Signaling (DONE)"]
+        LK["LiveKit WebRTC 2-Party Video Call Stage (components/livekit-video-call.tsx)"]
+        RT["Supabase Realtime Broadcast + Paging (Patient, Staff, Interpreter)"]
+        SYNC["End-to-End Call Lifecycle (Accept, Stream, Hangup, Disconnect)"]
+    end
 
-        subgraph Phase3 ["Phase 3: Video Assets & Clip Playback (P2)"]
-            Vid["Add sample demo MP4 assets to public/videos/ and Storage"]
-            Play["Verify full speech-to-video playback loop"]
-        end
+    subgraph Phase2 ["Phase 2: Vision Sign Recognition (Assigned to Teammate)"]
+        MP["MediaPipe / Vision Model for ISL Detection"]
+        Cam["Patient Tablet Gesture Camera"]
+        Clas["Gesture Classifier (Help, Pain, Yes, No, Scale)"]
+    end
 
-        subgraph Phase4 ["Phase 4: Clinician Pairing & Polish"]
-            QR["QR Code Bedside Pairing\n(Scan monitor to open patient tablet)"]
-            Timer["60s Auto-fallback timer when paging interpreter"]
-        end
+    subgraph Phase3 ["Phase 3: Video Clips & Playback (P2)"]
+        Vid["Sample MP4 Clips in Storage / public/videos"]
+        Play["Speech-to-ISL Clip Auto-Playback"]
+    end
 
-        Phase1 --> Phase2
-        Phase2 --> Phase3
-        Phase3 --> Phase4
-  ──────
-  ### Phase 1: Real WebRTC Video Call & Cross-Device Sync (P1 Core)
+    subgraph Phase4 ["Phase 4: Clinician Ergonomics & Polish"]
+        QR["QR Code Bedside Pairing for Tablets"]
+        Timer["60s Auto-fallback Timer on Unanswered Paging"]
+    end
 
-  Goal: Replace mock video with real LiveKit 2-party WebRTC video streaming between two physical devices.
+    Phase1 --> Phase2
+    Phase2 --> Phase3
+    Phase3 --> Phase4
+```
 
-  1. Patient Tablet Video Component:
-      • Embed <LiveKitRoom> inside app/patient/[sessionId]/page.tsx file:///home/vibhav/Projects/Ishara_VTSP/app/patient/[sessionId]/page.tsx so
-      when the interpreter accepts, the tablet immediately streams camera and displays the remote interpreter.
-  2. Interpreter Call View:
-      • Replace the static card in app/interpreter/call/[sessionId]/page.tsx
-      file:///home/vibhav/Projects/Ishara_VTSP/app/interpreter/call/[sessionId]/page.tsx with @livekit/components-react <VideoConference />.
-  3. Multi-Device Realtime Verification:
-      • Ensure the Supabase Realtime broadcast channels actively sync pictogram alerts across separate physical devices (e.g. an iPad on Wi-Fi and a
-      laptop).
+---
 
-  ──────
-  ### Phase 2: Client-Side Sign Language Detection (P3 Core)
+### Phase 1: Real WebRTC Video Call & Cross-Device Sync (COMPLETED)
 
-  Goal: Enable the patient tablet camera to actually watch and detect signs in real time.
+- **Patient Tablet Embedded Video Stage** (`app/patient/[sessionId]/page.tsx`):
+  - Directly mounts `LiveKitVideoCall` when `sessionStatus === 'interpreter_connected'`.
+  - Full-duplex audio and video between patient and interpreter.
+  - Disconnect button gracefully cleans up the WebRTC room and signals `active` triage state to both parties.
+- **Certified Interpreter Call Room** (`app/interpreter/call/[sessionId]/page.tsx`):
+  - Connected to `LiveKitVideoCall` with role `interpreter`.
+  - Subscribes to real-time session status; automatically routes back to `/interpreter/dashboard` if the patient disconnects.
+  - "Exit Call" broadcasts status change to `active` and returns to dashboard.
+- **Interpreter Request Broadcast & Acceptance** (`app/interpreter/dashboard/page.tsx`):
+  - Listens to Supabase Realtime channel `interpreter-requests` and `ishara_global_interpreter_requests`.
+  - Paging from Patient Tablet or Doctor Workstation rings the interpreter dashboard with sound and visual alert.
+  - "Accept Call" immediately transitions session status to `interpreter_connected`, waking up the patient tablet into live video and navigating interpreter to video room.
+- **LiveKit Video Component** (`components/livekit-video-call.tsx`):
+  - Built with `@livekit/components-react` and `@livekit/components-styles`.
+  - Supports camera toggle, microphone mute, fullscreen, connection status pill, and remote participant presence detection.
+- **Doctor / Staff Workstation** (`app/dashboard/[sessionId]/page.tsx`):
+  - Integrated `requestInterpreter` helper to page interpreters across physical devices and audit log to PostgreSQL.
 
-  1. MediaPipe Engine:
-      • Install @mediapipe/tasks-vision and create lib/sign-recognition.ts using Google's GestureRecognizer WASM model.
-  2. Camera Skeleton Overlay:
-      • Create components/gesture-camera-modal.tsx with a live landmark tracking canvas (visual skeleton on fingers) and real-time confidence pill.
-  3. Medical Gesture Set:
-      • Classify core medical signs:
-          • Open Palm / Wave → "Emergency / Help"
-          • Fist → "Acute Pain"
-          • Thumbs Up / Down → "Yes / No"
-          • Fingers Extended → Number rating on Pain Scale (1 to 5).
+---
 
-  4. Staff Station Readout:
-      • Stream recognized signs to app/dashboard/[sessionId]/page.tsx file:///home/vibhav/Projects/Ishara_VTSP/app/dashboard/[sessionId]/page.tsx
-      and speak them aloud with window.speechSynthesis.
-  ──────
-  ### Phase 3: Video Clips & Playback (P2 Core)
-  Goal: Replace the avatar fallback with actual video file playback.
-  1. Video Assets:
-      • Provide sample sign language demo clips in public/videos/ (e.g. chest-pain.mp4, we-are-helping.mp4, take-medicine.mp4).
-  2. Storage Linking:
-      • Verify that dictating a phrase on the Staff Station immediately autoplays the corresponding video on the Patient Tablet.
+### Phase 2: Sign Recognition Vision Model (Teammate's Focus)
 
-  ──────
-  ### Phase 4: QR Pairing & Clinician Polish
-
-  Goal: Impress the judges with frictionless hospital ergonomics.
-
-  1. QR Code Pairing:
-      • Show a QR code on the Staff Station for /patient/[sessionId] so doctors can point the tablet camera and pair instantly without typing URLs.
-  2. 60s Auto-Fallback Timer:
-      • If an interpreter is paged but doesn't answer within 60s, automatically alert staff and offer AI sign clips.
-
-  ──────
+- Assigned to teammate for hand gesture tracking / ISL translation model.
+- Codebase is ready to receive recognized text output via `sendPictogramAlert` or `REALTIME_EVENTS.GESTURE_TEXT`.

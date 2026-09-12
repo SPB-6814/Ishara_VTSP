@@ -6,6 +6,7 @@ import Image from 'next/image'
 import { PictogramGrid } from '@/components/pictogram-grid'
 import { ISLVideoPlayer } from '@/components/isl-video-player'
 import { StaffControlsDrawer } from '@/components/staff-controls-drawer'
+import { LiveKitVideoCall } from '@/components/livekit-video-call'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import type { DetailedPictogram } from '@/lib/pictograms'
 import {
@@ -33,6 +34,7 @@ export default function PatientPage() {
     sendPlayClip,
     clearClip,
     sendStatusChange,
+    requestInterpreter,
   } = useSessionRealtime({
     sessionId,
   })
@@ -47,15 +49,6 @@ export default function PatientPage() {
     setShowingConfirmation(true)
 
     toast.success(`Alert Sent: ${pictogram.label} ${extraNote ? `(${extraNote})` : ''} • डॉक्टर को सूचित किया गया`)
-
-    // Also auto-play reassurance clip if this is an emergency
-    if (pictogram.priority === 'P0' && pictogram.key !== 'pain-level') {
-      sendPlayClip(
-        'we-are-helping',
-        '/videos/we-are-helping.mp4',
-        'We are helping you • डॉक्टर आ रहे हैं'
-      )
-    }
   }
 
   const handleDoctorPlayClip = (clipKey: string, clipUrl: string, label: string) => {
@@ -63,12 +56,12 @@ export default function PatientPage() {
   }
 
   const handleRequestInterpreter = () => {
-    sendStatusChange('interpreter_requested')
-    fetch(`/api/session/${sessionId}/request-interpreter`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note: 'Bedside request from patient tablet' }),
-    }).catch(() => {})
+    requestInterpreter({
+      hospitalName: 'Ishara Demo Hospital (ICU Bed 4)',
+      patientName: 'Patient Bedside (ISL)',
+      note: 'Bedside request from patient tablet',
+    })
+    toast.info('Paging ISL interpreter...')
   }
 
   return (
@@ -119,11 +112,20 @@ export default function PatientPage() {
                 AI Video Mode • एआई मोड
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200">
-                <Wifi className="w-3.5 h-3.5 text-emerald-600" />
-                Ready • ऑनलाइन
-              </span>
+              <Button
+                size="sm"
+                onClick={handleRequestInterpreter}
+                className="bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold text-xs h-8 px-3 rounded-lg flex items-center gap-1.5 shadow-sm"
+              >
+                <Video className="w-3.5 h-3.5" />
+                <span>Call Interpreter</span>
+              </Button>
             )}
+
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200">
+              <Wifi className="w-3.5 h-3.5 text-emerald-600" />
+              Nurse Station Online
+            </span>
           </div>
         </div>
       </header>
@@ -131,7 +133,7 @@ export default function PatientPage() {
       {/* Main Content Area */}
       <div className="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4">
         {/* AI Fallback Reassurance Banner for Deaf Patient */}
-        {sessionStatus === 'ai_fallback' && (
+        {sessionStatus === 'ai_fallback' ? (
           <div className="w-full p-4 rounded-2xl bg-teal-800 text-white shadow-xl border-2 border-teal-400 flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-300">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-teal-700 flex items-center justify-center shrink-0">
@@ -150,6 +152,51 @@ export default function PatientPage() {
               </div>
             </div>
           </div>
+        ) : sessionStatus === 'interpreter_requested' ? (
+          <div className="w-full p-4 sm:p-5 rounded-2xl bg-amber-50 border-2 border-amber-400 text-amber-950 dark:bg-amber-950/40 dark:border-amber-600 dark:text-amber-100 flex items-center justify-between gap-3 shadow-md animate-pulse">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-200 dark:bg-amber-900/60 rounded-full shrink-0">
+                <Video className="w-6 h-6 text-amber-800 dark:text-amber-200 animate-bounce" />
+              </div>
+              <div>
+                <span className="text-xs uppercase font-extrabold tracking-wider text-amber-800 dark:text-amber-300 block">
+                  Interpreter Paged • अनुवादक को संदेश भेजा गया है
+                </span>
+                <h3 className="text-base sm:text-lg font-black">
+                  Connecting to Remote ISL Interpreter...
+                </h3>
+                <p className="text-xs opacity-80 mt-0.5">
+                  Please stay in front of this screen. The video relay will launch automatically once accepted.
+                </p>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900 shrink-0">
+              Connecting...
+            </span>
+          </div>
+        ) : sessionStatus !== 'interpreter_connected' && (
+          <div className="w-full p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-teal-50 dark:from-indigo-950/30 dark:to-teal-950/30 border border-indigo-200 dark:border-indigo-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-[#4F46E5] text-white shrink-0 shadow">
+                <Video className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                  Need Indian Sign Language Translation? / क्या आपको सांकेतिक भाषा अनुवादक चाहिए?
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300">
+                  Connect 2-party live HD video with a certified ISL interpreter directly from this tablet.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleRequestInterpreter}
+              className="w-full sm:w-auto bg-[#4F46E5] hover:bg-[#4338CA] text-white font-black text-xs sm:text-sm h-10 px-5 rounded-xl flex items-center justify-center gap-2 shadow"
+            >
+              <Video className="w-4 h-4" />
+              <span>🤟 Call Live Interpreter / अनुवादक बुलाएं</span>
+            </Button>
+          </div>
         )}
 
         {/* Instant Alert Confirmation Banner */}
@@ -164,7 +211,7 @@ export default function PatientPage() {
               </div>
               <div>
                 <span className="text-xs uppercase font-extrabold tracking-wider opacity-90 block">
-                  Alert Sent to Doctor / डॉक्टर को संदेश भेजा गया
+                  Alert Sent to Nurse Station / डॉक्टर को संदेश भेजा गया
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black">
                   &ldquo;{lastAlertText}&rdquo; {lastAlertHindi && `• ${lastAlertHindi}`}
@@ -186,34 +233,34 @@ export default function PatientPage() {
           </div>
         )}
 
-        {/* Live Interpreter Video Window (if connected) */}
+        {/* Live Interpreter Video Window (Direct Embedded WebRTC) */}
         {sessionStatus === 'interpreter_connected' && (
-          <div className="w-full p-4 rounded-2xl bg-indigo-900 text-white shadow-xl border-2 border-indigo-400 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-indigo-800 flex items-center justify-center shrink-0">
-                <Video className="w-6 h-6 text-indigo-300 animate-pulse" />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest">
-                  Active Video Connection
+          <div className="w-full rounded-2xl overflow-hidden bg-slate-950 border-4 border-indigo-500 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-indigo-950 px-4 py-2 border-b border-indigo-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Video className="w-4 h-4 text-indigo-300 animate-pulse" />
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  Live ISL Interpreter Relay Connected • लाइव वीडियो अनुवादक जुड़ा हुआ है
                 </span>
-                <h3 className="text-lg font-black">
-                  ISL Interpreter Connected
-                </h3>
-                <p className="text-xs text-indigo-200">
-                  Doctor and remote interpreter are relaying in real time.
-                </p>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => sendStatusChange('active')}
+                className="h-7 text-xs border-indigo-400 bg-indigo-900/80 text-white hover:bg-indigo-800 font-bold"
+              >
+                Disconnect Call
+              </Button>
             </div>
-
-            <Button
-              onClick={() => {
-                window.open(`/interpreter/call/${sessionId}`, '_blank')
-              }}
-              className="bg-white text-indigo-950 hover:bg-indigo-100 font-bold px-4 shadow"
-            >
-              Open Fullscreen Video
-            </Button>
+            <div className="h-[360px] sm:h-[420px] w-full">
+              <LiveKitVideoCall
+                roomName={sessionId}
+                participantName="Patient (Bed 4A)"
+                participantIdentity={`patient-${sessionId.slice(0, 6)}`}
+                role="patient"
+                onDisconnect={() => sendStatusChange('active')}
+              />
+            </div>
           </div>
         )}
 

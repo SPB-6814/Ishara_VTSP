@@ -12,7 +12,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { INTERPRETER_REQUESTS_CHANNEL, REALTIME_EVENTS } from '@/lib/realtime'
+import {
+  INTERPRETER_REQUESTS_CHANNEL,
+  REALTIME_EVENTS,
+  getSessionChannel,
+} from '@/lib/realtime'
 import { createClient } from '@/lib/supabase/client'
 
 interface IncomingRequest {
@@ -23,12 +27,47 @@ interface IncomingRequest {
   requestedAt: string
 }
 
+function playIncomingCallRing() {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    if (!AudioContextClass) return
+    const ctx = new AudioContextClass()
+    const now = ctx.currentTime
+
+    // Standard high-priority two-tone ring (853Hz + 960Hz)
+    const osc1 = ctx.createOscillator()
+    const osc2 = ctx.createOscillator()
+    const gain = ctx.createGain()
+
+    osc1.type = 'sine'
+    osc1.frequency.setValueAtTime(853, now)
+    osc2.type = 'sine'
+    osc2.frequency.setValueAtTime(960, now)
+
+    gain.gain.setValueAtTime(0.25, now)
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8)
+
+    osc1.connect(gain)
+    osc2.connect(gain)
+    gain.connect(ctx.destination)
+
+    osc1.start(now)
+    osc2.start(now)
+    osc1.stop(now + 0.8)
+    osc2.stop(now + 0.8)
+  } catch {}
+}
+
 export default function InterpreterDashboard() {
   const router = useRouter()
   const [status, setStatus] = useState<'available' | 'busy' | 'offline'>('available')
   const [requests, setRequests] = useState<IncomingRequest[]>([])
 
   const handleNewRequest = React.useCallback((payload: any) => {
+    playIncomingCallRing()
+
     const req: IncomingRequest = {
       id: `req-${Date.now()}`,
       sessionId: payload?.sessionId || 'demo-session',
@@ -100,7 +139,50 @@ export default function InterpreterDashboard() {
   const handleAcceptCall = async (req: IncomingRequest) => {
     toast.success(`Connecting to ${req.patientName}...`)
 
-    // Notify backend
+    const statusPayload = {
+      type: 'status_change',
+      sessionId: req.sessionId,
+      newStatus: 'interpreter_connected',
+      timestamp: new Date().toISOString(),
+    }
+
+    // 1. Local BroadcastChannel for same-machine tabs
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const bc = new BroadcastChannel(`ishara_session_${req.sessionId}`)
+        bc.postMessage({
+          type: REALTIME_EVENTS.STATUS_CHANGE,
+          payload: statusPayload,
+        })
+        setTimeout(() => {
+          try {
+            bc.close()
+          } catch {}
+        }, 3000)
+      }
+    } catch {}
+
+    // 2. Supabase Realtime Channel for remote devices
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        const supabase = createClient()
+        const sessChannel = supabase.channel(getSessionChannel(req.sessionId))
+        sessChannel.subscribe((subStatus: string) => {
+          if (subStatus === 'SUBSCRIBED') {
+            sessChannel.send({
+              type: 'broadcast',
+              event: REALTIME_EVENTS.STATUS_CHANGE,
+              payload: statusPayload,
+            })
+          }
+        })
+      }
+    } catch {}
+
+    // 3. Remove from pending requests
+    setRequests((prev) => prev.filter((r) => r.id !== req.id))
+
+    // 4. Notify backend database
     fetch(`/api/session/${req.sessionId}/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -110,7 +192,7 @@ export default function InterpreterDashboard() {
       }),
     }).catch(() => {})
 
-    // Route to video call view
+    // 5. Route to video call view
     router.push(`/interpreter/call/${req.sessionId}`)
   }
 

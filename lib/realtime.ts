@@ -26,3 +26,19 @@ export const REALTIME_EVENTS = {
   GESTURE_TEXT: 'gesture_text',
   NEW_REQUEST: 'new_request',
 } as const
+
+/** Canonical fallback UUID for demo session in PostgreSQL */
+export const DEMO_SESSION_UUID = '00000000-0000-0000-0000-000000000001'
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Normalizes any session identifier (including slugs like 'demo-session')
+ * into a valid UUID suitable for PostgreSQL uuid columns.
+ */
+export function toValidSessionUuid(id: string | undefined | null): string {
+  if (!id) return DEMO_SESSION_UUID
+  if (UUID_REGEX.test(id)) return id
+  return DEMO_SESSION_UUID
+}
+

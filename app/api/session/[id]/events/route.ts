@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { toValidSessionUuid } from '@/lib/realtime'
 
 export async function GET(
   request: Request,
@@ -8,6 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const validUuid = toValidSessionUuid(id)
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
       try {
@@ -15,7 +17,7 @@ export async function GET(
         const { data, error } = await supabase
           .from('session_events')
           .select('*')
-          .eq('session_id', id)
+          .eq('session_id', validUuid)
           .order('created_at', { ascending: false })
 
         if (!error && data) {
@@ -38,6 +40,7 @@ export async function POST(
     const { id } = await params
     const body = await request.json()
     const { eventType, payload } = body
+    const validUuid = toValidSessionUuid(id)
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
       try {
@@ -45,7 +48,7 @@ export async function POST(
         const { data, error } = await supabase
           .from('session_events')
           .insert({
-            session_id: id,
+            session_id: validUuid,
             event_type: eventType || 'note',
             payload: payload || {},
           })

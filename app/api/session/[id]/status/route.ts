@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { toValidSessionUuid, getSessionChannel, REALTIME_EVENTS } from '@/lib/realtime'
 
 export async function POST(
   request: Request,
@@ -9,6 +10,7 @@ export async function POST(
     const { id } = await params
     const body = await request.json()
     const { status, activeMode, interpreterId } = body
+    const validUuid = toValidSessionUuid(id)
 
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
@@ -19,7 +21,26 @@ export async function POST(
         if (interpreterId) updateData.assigned_interpreter_id = interpreterId
         if (status === 'closed') updateData.closed_at = new Date().toISOString()
 
-        await supabase.from('sessions').update(updateData).eq('id', id)
+        await supabase.from('sessions').update(updateData).eq('id', validUuid)
+
+        // Broadcast to Realtime channel for session
+        if (status) {
+          const channel = supabase.channel(getSessionChannel(id))
+          channel.subscribe((subStatus) => {
+            if (subStatus === 'SUBSCRIBED') {
+              channel.send({
+                type: 'broadcast',
+                event: REALTIME_EVENTS.STATUS_CHANGE,
+                payload: {
+                  type: 'status_change',
+                  sessionId: id,
+                  newStatus: status,
+                  timestamp: new Date().toISOString(),
+                },
+              })
+            }
+          })
+        }
       } catch (err) {
         console.warn('DB session status update error:', err)
       }

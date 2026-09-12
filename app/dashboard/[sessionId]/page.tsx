@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import type { GestureTextPayload } from '@/hooks/use-session-realtime'
 import Image from 'next/image'
 import { EmergencyAlertBanner } from '@/components/emergency-alert-banner'
@@ -10,6 +10,7 @@ import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition'
 import { searchClips } from '@/lib/isl-clips'
 import {
+  ArrowLeft,
   Video,
   Mic,
   MicOff,
@@ -24,6 +25,7 @@ import {
   Check,
   AlertTriangle,
   RefreshCw,
+  XCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -194,8 +196,9 @@ function GestureBanner({
 // \u2500\u2500\u2500 Dashboard page \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
 export default function DashboardPage() {
+  const router = useRouter()
   const params = useParams<{ sessionId: string }>()
-  const sessionId = params.sessionId || 'demo-session'
+  const sessionId = params.sessionId || '00000000-0000-0000-0000-000000000001'
 
   const [inputText, setInputText] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -240,6 +243,7 @@ export default function DashboardPage() {
     clearAlert,
     sendPlayClip,
     requestInterpreter,
+    cancelInterpreterRequest,
   } = useSessionRealtime({
     sessionId,
     onGestureReceived: handleGestureReceived,
@@ -309,7 +313,7 @@ export default function DashboardPage() {
   const handlePageInterpreter = () => {
     setIsPagingInterpreter(true)
     requestInterpreter({
-      hospitalName: 'Ishara Demo Hospital',
+      hospitalName: 'Apollo Multi-Specialty Hospital',
       patientName: patientDisplayName,
       note: 'Staff station remote paging',
     })
@@ -363,7 +367,7 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
       {/* Top Navigation */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
               <Image
@@ -392,6 +396,16 @@ export default function DashboardPage() {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/dashboard')}
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white flex items-center gap-1 border border-slate-300 dark:border-slate-700"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Bed Roster</span>
+            </Button>
+
+            <Button
               variant="outline"
               size="sm"
               onClick={() => setPairingOpen(true)}
@@ -411,25 +425,43 @@ export default function DashboardPage() {
               Open Tablet
             </Button>
 
-            <Button
-              size="sm"
-              onClick={handlePageInterpreter}
-              disabled={isPagingInterpreter || sessionStatus === 'interpreter_connected'}
-              className={`
-                text-xs font-bold flex items-center gap-1.5
-                ${sessionStatus === 'interpreter_connected'
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
-                }
-              `}
-            >
-              <Video className="w-4 h-4" />
-              {sessionStatus === 'interpreter_connected'
-                ? 'Interpreter Active'
-                : isPagingInterpreter
-                ? 'Paging...'
-                : 'Page Interpreter'}
-            </Button>
+            {sessionStatus === 'interpreter_requested' ? (
+              <div className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border border-amber-300">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
+                  Paging...
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelInterpreterRequest}
+                  className="h-8 px-2.5 text-xs font-bold border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 flex items-center gap-1"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Cancel</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handlePageInterpreter}
+                disabled={isPagingInterpreter || sessionStatus === 'interpreter_connected'}
+                className={`
+                  text-xs font-bold flex items-center gap-1.5
+                  ${sessionStatus === 'interpreter_connected'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
+                  }
+                `}
+              >
+                <Video className="w-4 h-4" />
+                {sessionStatus === 'interpreter_connected'
+                  ? 'Interpreter Active'
+                  : isPagingInterpreter
+                  ? 'Paging...'
+                  : 'Page Interpreter'}
+              </Button>
+            )}
           </div>
         </div>
       </header>
@@ -451,7 +483,6 @@ export default function DashboardPage() {
             }
           }}
         />
-
         {/* Emergency Alert Banner (P0 Realtime) */}
         <EmergencyAlertBanner
           alert={activeAlert}
@@ -501,6 +532,15 @@ export default function DashboardPage() {
               <Button
                 size="sm"
                 variant="outline"
+                onClick={cancelInterpreterRequest}
+                className="text-xs font-bold flex items-center gap-1 bg-white dark:bg-slate-900 border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                Cancel Request
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={handlePageInterpreter}
                 className="text-xs font-bold flex items-center gap-1 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700"
               >
@@ -511,20 +551,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Status Metrics Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-            <CardContent className="p-3 sm:p-4">
-              <span className="text-xs text-slate-500 font-medium">Session Status</span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                <span className="text-sm sm:text-base font-bold capitalize text-slate-900 dark:text-white">
-                  {sessionStatus.replace('_', ' ')}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
+        {/* Status Metrics Bar (Dynamic Session Data Only) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
             <CardContent className="p-3 sm:p-4">
               <span className="text-xs text-slate-500 font-medium">Remote Interpreter</span>
@@ -534,28 +562,16 @@ export default function DashboardPage() {
                     sessionStatus === 'interpreter_connected'
                       ? 'bg-emerald-500'
                       : sessionStatus === 'interpreter_requested'
-                      ? 'bg-amber-500 animate-ping'
+                      ? 'bg-amber-500'
                       : 'bg-slate-400'
                   }`}
                 />
                 <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
                   {sessionStatus === 'interpreter_connected'
-                    ? 'Connected'
+                    ? 'Connected (2-Way Video Live)'
                     : sessionStatus === 'interpreter_requested'
-                    ? 'Paging...'
+                    ? 'Paging Standby Pool...'
                     : 'Standby'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-            <CardContent className="p-3 sm:p-4">
-              <span className="text-xs text-slate-500 font-medium">AI Fallback Library</span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
-                <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                  48 ISL Clips Ready
                 </span>
               </div>
             </CardContent>
@@ -565,9 +581,9 @@ export default function DashboardPage() {
             <CardContent className="p-3 sm:p-4">
               <span className="text-xs text-slate-500 font-medium">Audit Events Logged</span>
               <div className="flex items-center gap-2 mt-1">
-                <FileText className="w-4 h-4 text-teal-600" />
+                <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                 <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                  {events.length} Interactions
+                  {events.length} Interactions Recorded
                 </span>
               </div>
             </CardContent>
@@ -744,21 +760,21 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="grid grid-cols-2 gap-3 pt-2">
             <Button
               onClick={handleCopyTabletUrl}
               variant="outline"
-              className="flex-1 text-xs font-bold flex items-center justify-center gap-1.5"
+              className="w-full text-xs h-9 font-bold rounded-xl border-slate-300 dark:border-slate-700 flex items-center justify-center gap-1.5"
             >
-              {copiedUrl ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-              {copiedUrl ? 'Copied!' : 'Copy Link'}
+              {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedUrl ? 'Copied!' : 'Copy Link'}</span>
             </Button>
             <Button
               onClick={() => window.open(tabletUrl, '_blank')}
-              className="flex-1 bg-[#084C5B] hover:bg-[#0D748A] text-white text-xs font-bold flex items-center justify-center gap-1.5"
+              className="w-full bg-[#084C5B] hover:bg-[#0D748A] text-white text-xs h-9 font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-sm"
             >
-              <ExternalLink className="w-4 h-4" />
-              Open Tablet
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Open Tablet</span>
             </Button>
           </div>
         </DialogContent>

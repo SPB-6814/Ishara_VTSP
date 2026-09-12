@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 /*
  * Ishara Clinical Communication — Design Tokens
@@ -143,4 +143,10 @@
   --background: #FFFFFF;
   --primary: #084C5B;
   --destructive: #DC2626;
+}
+
+/* ===== Night Light Mode: Blue-light cut for clinical night shifts ===== */
+html.night-light {
+  filter: sepia(0.35) saturate(1.2) hue-rotate(-12deg);
+  transition: filter 0.25s ease-in-out;
 }

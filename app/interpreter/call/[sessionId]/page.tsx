@@ -12,7 +12,7 @@ import { toast } from 'sonner'
 export default function InterpreterCallPage() {
   const params = useParams<{ sessionId: string }>()
   const router = useRouter()
-  const sessionId = params.sessionId || 'demo-session'
+  const sessionId = params.sessionId || '00000000-0000-0000-0000-000000000001'
 
   const { sendStatusChange } = useSessionRealtime({
     sessionId,

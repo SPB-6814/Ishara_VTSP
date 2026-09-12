@@ -6,46 +6,47 @@ import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Video, ArrowLeft, Mail, CheckCircle2, Zap } from 'lucide-react'
+import { Video, ArrowLeft, Mail, Lock, KeyRound, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 export default function InterpreterAuthPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sentMagicLink, setSentMagicLink] = useState(false)
 
-  const handleMagicLinkSubmit = async (e: React.FormEvent) => {
+  const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
+    if (!email || !password) return
 
     setLoading(true)
     try {
-      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-        const { createClient } = await import('@/lib/supabase/client')
-        const supabase = createClient()
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=/interpreter/dashboard`,
-          },
-        })
-        if (error) throw error
+      const supabase = createClient()
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim(),
+      })
+
+      if (error) {
+        throw error
       }
-      setSentMagicLink(true)
-      toast.success('Magic link sent to ' + email)
-    } catch {
-      setSentMagicLink(true)
-      toast.success('Magic link sent to ' + email + ' (Demo Mode)')
+
+      if (data?.user) {
+        toast.success('Authenticated as ' + (data.user.user_metadata?.full_name || email))
+        router.push('/interpreter/dashboard')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Authentication failed. Please verify interpreter credentials.')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleQuickDemoLogin = () => {
-    document.cookie = 'ishara_demo_role=interpreter; path=/; max-age=86400; SameSite=Lax'
-    toast.success('Logged in as Certified ISL Interpreter')
-    router.push('/interpreter/dashboard')
+  const fillEvaluationAccount = (fillEmail: string, fillPass: string) => {
+    setEmail(fillEmail)
+    setPassword(fillPass)
+    toast.info(`Filled interpreter credentials for ${fillEmail}`)
   }
 
   return (
@@ -67,61 +68,93 @@ export default function InterpreterAuthPage() {
               ISL Interpreter Portal
             </CardTitle>
             <p className="text-xs text-slate-500">
-              Sign in to receive on-demand hospital translation calls.
+              Sign in to manage on-demand availability and receive emergency hospital video calls.
             </p>
           </CardHeader>
 
           <CardContent className="pt-6 space-y-6">
-            {sentMagicLink ? (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-                <h4 className="font-bold text-emerald-950 text-sm">Check Your Inbox</h4>
-                <p className="text-xs text-emerald-800">
-                  We sent a magic sign-in link to <b>{email}</b>.
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleMagicLinkSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Interpreter Email
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
-                    <Input
-                      type="email"
-                      required
-                      placeholder="interpreter@isl-network.org"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-9 h-11 rounded-xl"
-                    />
-                  </div>
+            <form onSubmit={handlePasswordLogin} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Interpreter Email
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+                  <Input
+                    type="email"
+                    required
+                    placeholder="ananya.isl@relay.org"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-9 h-11 rounded-xl"
+                  />
                 </div>
+              </div>
 
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-11 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold"
-                >
-                  {loading ? 'Sending link...' : 'Send Magic Link'}
-                </Button>
-              </form>
-            )}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+                  <Input
+                    type="password"
+                    required
+                    placeholder="••••••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-9 h-11 rounded-xl"
+                  />
+                </div>
+              </div>
 
-            {/* Quick Demo Bypass */}
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 rounded-xl bg-[#4F46E5] hover:bg-[#4338CA] text-white font-bold"
+              >
+                {loading ? 'Authenticating...' : 'Sign In to Interpreter Dashboard'}
+              </Button>
+            </form>
+
+            {/* Evaluation Credentials Helper for Judges */}
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
               <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">
-                <Zap className="w-3.5 h-3.5" /> Demo Mode One-Click Login
+                <Sparkles className="w-3.5 h-3.5" /> Registered Interpreter Pool (Click to Fill)
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleQuickDemoLogin}
-                className="w-full h-10 text-xs font-bold rounded-xl hover:bg-indigo-50 hover:text-[#4F46E5]"
-              >
-                Demo Interpreter Dashboard
-              </Button>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => fillEvaluationAccount('ananya.isl@relay.org', 'Ishara2026!')}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-left transition-all bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between"
+                >
+                  <div>
+                    <span className="text-xs font-bold block text-slate-900 dark:text-white">
+                      Ananya Deshmukh (Certified ISL A-Grade)
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      ananya.isl@relay.org • Ishara2026!
+                    </span>
+                  </div>
+                  <KeyRound className="w-4 h-4 text-indigo-600" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => fillEvaluationAccount('vikram.isl@relay.org', 'Ishara2026!')}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-indigo-500 text-left transition-all bg-slate-50/60 dark:bg-slate-800/40 flex items-center justify-between"
+                >
+                  <div>
+                    <span className="text-xs font-bold block text-slate-900 dark:text-white">
+                      Vikram Mehta (Certified ISL Medical)
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      vikram.isl@relay.org • Ishara2026!
+                    </span>
+                  </div>
+                  <KeyRound className="w-4 h-4 text-indigo-600" />
+                </button>
+              </div>
             </div>
           </CardContent>
         </Card>

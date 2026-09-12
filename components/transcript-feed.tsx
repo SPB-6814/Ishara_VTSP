@@ -9,6 +9,7 @@ import {
   PlayCircle,
   MessageSquare,
   Clock,
+  Sparkles,
 } from 'lucide-react'
 
 interface TranscriptFeedProps {
@@ -123,6 +124,34 @@ export function TranscriptFeed({ events }: TranscriptFeedProps) {
                     <div className="font-bold text-base text-slate-900 dark:text-white mt-0.5">
                       &ldquo;{payload.label || payload.clipKey}&rdquo;
                     </div>
+                  </div>
+                </div>
+              </div>
+            )
+
+          case 'gesture_text':
+            return (
+              <div
+                key={evt.id}
+                className="p-3.5 rounded-xl border-l-4 border-l-purple-600 bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 flex items-start justify-between gap-2 shadow-sm"
+              >
+                <div className="flex items-start gap-2.5">
+                  <Sparkles className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-1.5 py-0.5 rounded">
+                        🤟 AI Sign Recognized
+                      </span>
+                      <span className="text-xs text-slate-500">{time}</span>
+                    </div>
+                    <div className="font-extrabold text-base text-slate-900 dark:text-white mt-0.5">
+                      &ldquo;{payload.text || payload.sign || 'Recognized Sign'}&rdquo;
+                    </div>
+                    {payload.confidence && (
+                      <p className="text-[11px] text-purple-700 dark:text-purple-300 font-medium mt-0.5">
+                        Confidence: {Math.round(payload.confidence * 100)}%
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

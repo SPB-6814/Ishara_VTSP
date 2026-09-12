@@ -18,11 +18,18 @@ import {
   Clock,
   FileText,
   Loader2,
+  QrCode,
+  ShieldAlert,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { QRPairingModal } from '@/components/qr-pairing-modal'
+import { PagingCountdownBanner } from '@/components/paging-countdown-banner'
+import { InterpreterFallbackModal } from '@/components/interpreter-fallback-modal'
+import { clinicalAudio } from '@/lib/audio-alerts'
 
 export default function DashboardPage() {
   const params = useParams<{ sessionId: string }>()
@@ -32,6 +39,9 @@ export default function DashboardPage() {
   const [isSearching, setIsSearching] = useState(false)
   const [isPagingInterpreter, setIsPagingInterpreter] = useState(false)
   const [patientDisplayName, setPatientDisplayName] = useState('Patient Bed 4A (Ramesh)')
+  const [isQRPairingOpen, setIsQRPairingOpen] = useState(false)
+  const [isFallbackModalOpen, setIsFallbackModalOpen] = useState(false)
+  const [pagingSecondsLeft, setPagingSecondsLeft] = useState(60)
 
   const {
     activeAlert,
@@ -71,6 +81,37 @@ export default function DashboardPage() {
       .catch(() => {})
   }, [sessionId])
 
+  // 60-Second Interpreter Paging Auto-Fallback Timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null
+
+    if (sessionStatus === 'interpreter_requested') {
+      interval = setInterval(() => {
+        setPagingSecondsLeft((prev) => {
+          if (prev <= 1) {
+            if (interval) clearInterval(interval)
+            // Trigger clinical alert audio chime
+            clinicalAudio.playInterpreterTimeoutAlert()
+            // Auto switch to AI Fallback
+            sendStatusChange('ai_fallback')
+            setIsFallbackModalOpen(true)
+            toast.error('Interpreter unresponsive after 60s. Auto-switched to AI Sign Fallback.', {
+              duration: 8000,
+            })
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    } else {
+      setPagingSecondsLeft(60)
+    }
+
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [sessionStatus, sendStatusChange])
+
   const handleToggleListening = () => {
     if (isListening) {
       stopListening()
@@ -107,7 +148,9 @@ export default function DashboardPage() {
 
   const handlePageInterpreter = () => {
     setIsPagingInterpreter(true)
+    setPagingSecondsLeft(60)
     sendStatusChange('interpreter_requested')
+    clinicalAudio.playPagingStart()
 
     fetch(`/api/session/${sessionId}/request-interpreter`, {
       method: 'POST',
@@ -115,8 +158,22 @@ export default function DashboardPage() {
       body: JSON.stringify({ note: 'Staff station remote paging' }),
     }).catch(() => {})
 
-    toast.info('Paging ISL interpreters...')
-    setTimeout(() => setIsPagingInterpreter(false), 2500)
+    toast.info('Paging ISL interpreters (60s timer active)...')
+    setTimeout(() => setIsPagingInterpreter(false), 2000)
+  }
+
+  const handleSkipToTimeout = () => {
+    clinicalAudio.playInterpreterTimeoutAlert()
+    sendStatusChange('ai_fallback')
+    setIsFallbackModalOpen(true)
+    setPagingSecondsLeft(0)
+    toast.warning('Fast Demo: Triggered 60s Interpreter Timeout Fallback')
+  }
+
+  const handleCancelPaging = () => {
+    sendStatusChange('active')
+    setPagingSecondsLeft(60)
+    toast.info('Interpreter paging cancelled.')
   }
 
   return (
@@ -151,14 +208,25 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Bedside QR Code Pairing Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsQRPairingOpen(true)}
+              className="border-teal-400 bg-teal-50/50 hover:bg-teal-100 text-[#084C5B] dark:bg-teal-950/40 dark:border-teal-700 dark:text-teal-300 text-xs font-bold flex items-center gap-1.5 shadow-xs"
+            >
+              <QrCode className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+              <span>Bedside QR Pair</span>
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => window.open(`/patient/${sessionId}`, '_blank')}
-              className="border-teal-300 text-[#084C5B] hover:bg-teal-50 dark:border-teal-700 dark:text-teal-300 text-xs flex items-center gap-1.5"
+              className="border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 text-xs flex items-center gap-1.5"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              Open Patient Tablet
+              Open Tablet
             </Button>
 
             <Button
@@ -169,6 +237,8 @@ export default function DashboardPage() {
                 text-xs font-bold flex items-center gap-1.5
                 ${sessionStatus === 'interpreter_connected'
                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  : sessionStatus === 'interpreter_requested'
+                  ? 'bg-amber-600 hover:bg-amber-700 text-white animate-pulse'
                   : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
                 }
               `}
@@ -176,6 +246,8 @@ export default function DashboardPage() {
               <Video className="w-4 h-4" />
               {sessionStatus === 'interpreter_connected'
                 ? 'Interpreter Active'
+                : sessionStatus === 'interpreter_requested'
+                ? `Paging (${pagingSecondsLeft}s)`
                 : isPagingInterpreter
                 ? 'Paging...'
                 : 'Page Interpreter'}
@@ -186,6 +258,63 @@ export default function DashboardPage() {
 
       {/* Main Dashboard Grid */}
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-5">
+        {/* Active Interpreter 60s Paging Countdown Banner */}
+        {sessionStatus === 'interpreter_requested' && (
+          <PagingCountdownBanner
+            secondsLeft={pagingSecondsLeft}
+            totalSeconds={60}
+            onCancel={handleCancelPaging}
+            onSkipToTimeout={handleSkipToTimeout}
+          />
+        )}
+
+        {/* AI Fallback Mode Escalation Alert Banner */}
+        {sessionStatus === 'ai_fallback' && (
+          <div className="w-full bg-red-50 dark:bg-red-950/40 border-2 border-red-400 dark:border-red-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-red-100 dark:bg-red-900/60 text-red-600 dark:text-red-300 shrink-0">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-red-700 dark:text-red-400">
+                    P2 Clinician Escalation
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-red-200 dark:bg-red-900 text-red-800 dark:text-red-200 font-bold">
+                    Interpreter Paging Timed Out (60s)
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-0.5">
+                  AI Sign Language Video Fallback Mode Active
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Patient tablet has been reassured with visual signs. Use 1-click clinical sign broadcast to communicate.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <Button
+                size="sm"
+                onClick={() => setIsFallbackModalOpen(true)}
+                className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1" />
+                View Recommended Sign Clips
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePageInterpreter}
+                className="border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-300 text-xs font-bold"
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                Retry Interpreter
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Emergency Alert Banner (P0 Realtime) */}
         <EmergencyAlertBanner
           alert={activeAlert}
@@ -199,9 +328,19 @@ export default function DashboardPage() {
             <CardContent className="p-3 sm:p-4">
               <span className="text-xs text-slate-500 font-medium">Session Status</span>
               <div className="flex items-center gap-2 mt-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span
+                  className={`w-2.5 h-2.5 rounded-full ${
+                    sessionStatus === 'ai_fallback'
+                      ? 'bg-red-500'
+                      : sessionStatus === 'interpreter_requested'
+                      ? 'bg-amber-500 animate-ping'
+                      : 'bg-emerald-500'
+                  }`}
+                />
                 <span className="text-sm sm:text-base font-bold capitalize text-slate-900 dark:text-white">
-                  {sessionStatus.replace('_', ' ')}
+                  {sessionStatus === 'ai_fallback'
+                    ? 'AI Fallback'
+                    : sessionStatus.replace('_', ' ')}
                 </span>
               </div>
             </CardContent>
@@ -217,6 +356,8 @@ export default function DashboardPage() {
                       ? 'bg-emerald-500'
                       : sessionStatus === 'interpreter_requested'
                       ? 'bg-amber-500 animate-ping'
+                      : sessionStatus === 'ai_fallback'
+                      ? 'bg-red-500'
                       : 'bg-slate-400'
                   }`}
                 />
@@ -224,7 +365,9 @@ export default function DashboardPage() {
                   {sessionStatus === 'interpreter_connected'
                     ? 'Connected'
                     : sessionStatus === 'interpreter_requested'
-                    ? 'Paging...'
+                    ? `Paging (${pagingSecondsLeft}s)`
+                    : sessionStatus === 'ai_fallback'
+                    ? 'Timed Out (60s)'
                     : 'Standby'}
                 </span>
               </div>
@@ -396,6 +539,23 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Bedside QR Code Pairing Modal */}
+      <QRPairingModal
+        open={isQRPairingOpen}
+        onOpenChange={setIsQRPairingOpen}
+        sessionId={sessionId}
+        patientName={patientDisplayName}
+      />
+
+      {/* 60s Interpreter Unreachable AI Fallback Modal */}
+      <InterpreterFallbackModal
+        open={isFallbackModalOpen}
+        onOpenChange={setIsFallbackModalOpen}
+        onPlayClip={sendPlayClip}
+        onRetryPaging={handlePageInterpreter}
+        sessionId={sessionId}
+      />
     </main>
   )
 }

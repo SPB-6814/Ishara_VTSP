@@ -13,6 +13,7 @@ import {
   Video,
   Shield,
   Wifi,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -112,6 +113,11 @@ export default function PatientPage() {
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
                 Paging Interpreter...
               </span>
+            ) : sessionStatus === 'ai_fallback' ? (
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-200 border border-teal-300">
+                <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                AI Video Mode • एआई मोड
+              </span>
             ) : (
               <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200">
                 <Wifi className="w-3.5 h-3.5 text-emerald-600" />
@@ -124,6 +130,28 @@ export default function PatientPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 max-w-6xl w-full mx-auto p-3 sm:p-4 md:p-6 flex flex-col gap-4">
+        {/* AI Fallback Reassurance Banner for Deaf Patient */}
+        {sessionStatus === 'ai_fallback' && (
+          <div className="w-full p-4 rounded-2xl bg-teal-800 text-white shadow-xl border-2 border-teal-400 flex items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-teal-700 flex items-center justify-center shrink-0">
+                <Sparkles className="w-6 h-6 text-teal-200" />
+              </div>
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-teal-200 block">
+                  AI Sign Language Video Mode • एआई सहायता
+                </span>
+                <h3 className="text-lg font-black">
+                  अनुवादक व्यस्त हैं • डॉक्टर वीडियो संकेतों से बात कर रहे हैं
+                </h3>
+                <p className="text-xs text-teal-100 opacity-90">
+                  All interpreters currently busy. Doctor is communicating directly using Ishara visual sign clips.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Instant Alert Confirmation Banner */}
         {showingConfirmation && lastAlertText && (
           <div

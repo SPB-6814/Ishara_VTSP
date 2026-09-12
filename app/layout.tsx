@@ -33,7 +33,11 @@ export const viewport: Viewport = {
   userScalable: false, // Kiosk-mode feel on patient tablet
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="en"

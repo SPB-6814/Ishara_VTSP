@@ -11,6 +11,7 @@ import type {
   PictogramAlertPayload,
   PlayClipPayload,
   StatusChangePayload,
+  GestureTextPayload,
   SessionStatus,
   SessionEvent,
 } from '@/lib/types'
@@ -87,6 +88,19 @@ export function useSessionRealtime({
             payload: { message: `Status changed to ${statusData.newStatus}` },
             actor_id: null,
             created_at: statusData.timestamp || new Date().toISOString(),
+          },
+          ...prev,
+        ])
+      } else if (type === REALTIME_EVENTS.GESTURE_TEXT) {
+        const gestureData = payload as GestureTextPayload
+        setEvents((prev) => [
+          {
+            id: `evt-${Date.now()}-${Math.random()}`,
+            session_id: sessionId,
+            event_type: 'gesture_text',
+            payload: gestureData as unknown as Record<string, unknown>,
+            actor_id: null,
+            created_at: gestureData.timestamp || new Date().toISOString(),
           },
           ...prev,
         ])

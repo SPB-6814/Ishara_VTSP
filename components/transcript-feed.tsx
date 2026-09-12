@@ -112,6 +112,34 @@ export function TranscriptFeed({ events }: TranscriptFeedProps) {
               </div>
             )
 
+          case 'gesture_text':
+            return (
+              <div
+                key={evt.id}
+                className="p-3.5 rounded-xl border-l-4 border-l-cyan-600 bg-cyan-50/70 dark:bg-cyan-950/30 border border-cyan-200 dark:border-cyan-900/40 flex items-start justify-between gap-2 shadow-sm"
+              >
+                <div className="flex items-start gap-2.5">
+                  <MessageSquare className="w-5 h-5 text-cyan-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300 bg-cyan-100 dark:bg-cyan-900/60 px-1.5 py-0.5 rounded">
+                        Recognized Sign
+                      </span>
+                      <span className="text-xs text-slate-500">{time}</span>
+                    </div>
+                    <div className="font-extrabold text-base text-slate-900 dark:text-white mt-0.5">
+                      {payload.text || 'Unrecognized sign'}
+                    </div>
+                  </div>
+                </div>
+                {typeof payload.confidence === 'number' && (
+                  <span className="text-xs font-bold text-cyan-700 dark:text-cyan-300">
+                    {Math.round(payload.confidence * 100)}%
+                  </span>
+                )}
+              </div>
+            )
+
           default:
             return (
               <div

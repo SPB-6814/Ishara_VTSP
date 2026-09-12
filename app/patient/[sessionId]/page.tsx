@@ -7,6 +7,7 @@ import { PictogramGrid } from '@/components/pictogram-grid'
 import { ISLVideoPlayer } from '@/components/isl-video-player'
 import { StaffControlsDrawer } from '@/components/staff-controls-drawer'
 import { LiveKitVideoCall } from '@/components/livekit-video-call'
+import { VisionGestureCamera } from '@/components/vision-gesture-camera'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import type { DetailedPictogram } from '@/lib/pictograms'
 import {
@@ -32,6 +33,7 @@ export default function PatientPage() {
     sessionStatus,
     sendPictogramAlert,
     sendPlayClip,
+    sendGestureText,
     clearClip,
     sendStatusChange,
     requestInterpreter,
@@ -263,6 +265,15 @@ export default function PatientPage() {
             </div>
           </div>
         )}
+
+        {/* Client-side sign recognition with an explicit privacy shutter */}
+        <section aria-label="Sign language gesture recognition" className="w-full max-w-xl mx-auto">
+          <VisionGestureCamera
+            onGestureDetected={(gesture) =>
+              sendGestureText(gesture.text, gesture.confidence, gesture.timestamp)
+            }
+          />
+        </section>
 
         {/* Pictogram Grid (P0) */}
         <div className="flex-1 flex flex-col">

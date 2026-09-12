@@ -152,6 +152,9 @@ export function useSessionRealtime({
           .on('broadcast', { event: REALTIME_EVENTS.STATUS_CHANGE }, (response: any) => {
             handleIncomingEvent(REALTIME_EVENTS.STATUS_CHANGE, response.payload)
           })
+          .on('broadcast', { event: REALTIME_EVENTS.GESTURE_TEXT }, (response: any) => {
+            handleIncomingEvent(REALTIME_EVENTS.GESTURE_TEXT, response.payload)
+          })
           .subscribe((status: string) => {
             setIsConnected(status === 'SUBSCRIBED')
           })
@@ -269,6 +272,58 @@ export function useSessionRealtime({
         },
         ...prev,
       ])
+    },
+    [sessionId]
+  )
+
+  /** Broadcast a debounced clinical gesture recognized on the patient tablet */
+  const sendGestureText = useCallback(
+    (text: string, confidence: number, timestamp = new Date().toISOString()) => {
+      if (confidence <= 0.8 || !text.trim()) return
+
+      const payload: GestureTextPayload = {
+        type: 'gesture_text',
+        sessionId,
+        text,
+        confidence,
+        timestamp,
+      }
+
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: REALTIME_EVENTS.GESTURE_TEXT,
+          payload,
+        })
+      }
+
+      if (supabaseChannelRef.current) {
+        supabaseChannelRef.current.send({
+          type: 'broadcast',
+          event: REALTIME_EVENTS.GESTURE_TEXT,
+          payload,
+        })
+      }
+
+      setEvents((prev) => [
+        {
+          id: `evt-${Date.now()}`,
+          session_id: sessionId,
+          event_type: 'gesture_text',
+          payload: payload as unknown as Record<string, unknown>,
+          actor_id: null,
+          created_at: timestamp,
+        },
+        ...prev,
+      ])
+
+      fetch(`/api/patient/${sessionId}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: 'gesture_text',
+          payload,
+        }),
+      }).catch(() => {})
     },
     [sessionId]
   )
@@ -397,6 +452,7 @@ export function useSessionRealtime({
     isConnected,
     sendPictogramAlert,
     sendPlayClip,
+    sendGestureText,
     sendStatusChange,
     requestInterpreter,
     clearAlert,

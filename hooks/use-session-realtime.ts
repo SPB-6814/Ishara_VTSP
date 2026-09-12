@@ -367,6 +367,67 @@ export function useSessionRealtime({
     [sessionId, sendStatusChange]
   )
 
+  /** Cancel an active interpreter request */
+  const cancelInterpreterRequest = useCallback(
+    async () => {
+      // 1. Reset session status back to active triage
+      sendStatusChange('active')
+
+      const cancelPayload = {
+        type: 'cancel_request',
+        sessionId,
+      }
+
+      // 2. Broadcast cancellation over local BroadcastChannel
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        try {
+          const bc = new BroadcastChannel('ishara_global_interpreter_requests')
+          bc.postMessage({
+            type: 'cancel_request',
+            payload: cancelPayload,
+          })
+          setTimeout(() => {
+            try {
+              bc.close()
+            } catch {}
+          }, 3000)
+        } catch {}
+      }
+
+      // 3. Broadcast cancellation over Supabase Realtime channel
+      try {
+        if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+          const supabase = createClient()
+          const interpChannel = supabase.channel(INTERPRETER_REQUESTS_CHANNEL)
+          interpChannel.subscribe((subStatus: string) => {
+            if (subStatus === 'SUBSCRIBED') {
+              interpChannel.send({
+                type: 'broadcast',
+                event: REALTIME_EVENTS.CANCEL_REQUEST,
+                payload: cancelPayload,
+              })
+            }
+          })
+        }
+      } catch (err) {
+        console.warn('Realtime interpreter cancellation error:', err)
+      }
+
+      // 4. Update session status in API
+      try {
+        await fetch(`/api/session/${sessionId}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: 'active',
+            activeMode: 'pictogram',
+          }),
+        })
+      } catch {}
+    },
+    [sessionId, sendStatusChange]
+  )
+
   const clearAlert = useCallback(() => {
     setActiveAlert(null)
   }, [])
@@ -385,6 +446,7 @@ export function useSessionRealtime({
     sendPlayClip,
     sendStatusChange,
     requestInterpreter,
+    cancelInterpreterRequest,
     clearAlert,
     clearClip,
     setEvents,

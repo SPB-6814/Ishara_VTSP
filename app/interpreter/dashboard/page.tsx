@@ -122,19 +122,39 @@ export default function InterpreterDashboard() {
   }
 
   const handleNewRequest = React.useCallback((payload: any) => {
-    playIncomingCallRing()
+    const sessId = payload?.sessionId || '00000000-0000-0000-0000-000000000001'
 
     const req: IncomingRequest = {
-      id: `req-${Date.now()}`,
-      sessionId: payload?.sessionId || '00000000-0000-0000-0000-000000000001',
+      id: payload?.id || `req-${sessId}`,
+      sessionId: sessId,
       hospitalName: payload?.hospitalName || 'Apollo Multi-Specialty Hospital',
       patientName: payload?.patientName || 'Bedside Patient (ISL)',
       requestedAt: new Date().toLocaleTimeString(),
     }
 
-    setRequests((prev) => [req, ...prev])
-    toast.error(`🚨 Incoming Emergency ISL Call from ${req.hospitalName}!`, {
-      duration: 12000,
+    setRequests((prev) => {
+      // Deduplicate: ignore duplicate triggers for the same active session
+      if (prev.some((r) => r.sessionId === req.sessionId)) {
+        return prev
+      }
+      playIncomingCallRing()
+      toast.error(`🚨 Incoming Emergency ISL Call from ${req.hospitalName}!`, {
+        duration: 12000,
+      })
+      return [req, ...prev]
+    })
+  }, [])
+
+  const handleCancelRequest = React.useCallback((payload: any) => {
+    const cancelSessId = payload?.sessionId
+    if (!cancelSessId) return
+
+    setRequests((prev) => {
+      const match = prev.find((r) => r.sessionId === cancelSessId)
+      if (match) {
+        toast.info(`Emergency call from ${match.patientName} was cancelled by hospital`)
+      }
+      return prev.filter((r) => r.sessionId !== cancelSessId)
     })
   }, [])
 
@@ -147,6 +167,8 @@ export default function InterpreterDashboard() {
         bc.onmessage = (event) => {
           if (event.data?.type === 'new_request') {
             handleNewRequest(event.data.payload)
+          } else if (event.data?.type === 'cancel_request') {
+            handleCancelRequest(event.data.payload)
           }
         }
       }
@@ -164,6 +186,9 @@ export default function InterpreterDashboard() {
           .on('broadcast', { event: REALTIME_EVENTS.NEW_REQUEST }, (response: any) => {
             handleNewRequest(response.payload)
           })
+          .on('broadcast', { event: REALTIME_EVENTS.CANCEL_REQUEST }, (response: any) => {
+            handleCancelRequest(response.payload)
+          })
           .subscribe()
       }
     } catch {}
@@ -172,7 +197,7 @@ export default function InterpreterDashboard() {
       if (bc) bc.close()
       if (channel && supabase) supabase.removeChannel(channel)
     }
-  }, [handleNewRequest])
+  }, [handleNewRequest, handleCancelRequest])
 
   const handleAcceptCall = async (req: IncomingRequest) => {
     toast.success(`Connecting to ${req.patientName}...`)
@@ -250,8 +275,8 @@ export default function InterpreterDashboard() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
       {/* Top Header */}
-      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+      <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 py-3 sticky top-0 z-30 shadow-xs">
+        <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-indigo-50 border border-indigo-200 flex items-center justify-center shrink-0">
               <Image src="/logo.png" alt="Ishara Logo" fill sizes="36px" className="object-contain p-1" priority />
@@ -322,7 +347,7 @@ export default function InterpreterDashboard() {
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 space-y-6">
+      <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6">
         {/* Availability Banner */}
         <div
           className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${

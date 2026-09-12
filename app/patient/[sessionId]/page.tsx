@@ -14,6 +14,7 @@ import {
   Video,
   Shield,
   Wifi,
+  X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -46,9 +47,15 @@ export default function PatientPage() {
     clearClip,
     sendStatusChange,
     requestInterpreter,
+    cancelInterpreterRequest,
   } = useSessionRealtime({
     sessionId,
   })
+
+  const handleCancelInterpreter = () => {
+    cancelInterpreterRequest()
+    toast.info('Interpreter request cancelled / अनुरोध रद्द किया गया')
+  }
 
   const handleTriggerAlert = (pictogram: DetailedPictogram, extraNote?: string) => {
     // 1. Send instant alert via Realtime broadcast
@@ -113,10 +120,21 @@ export default function PatientPage() {
                 Interpreter Live
               </span>
             ) : sessionStatus === 'interpreter_requested' ? (
-              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border border-amber-300">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
-                Paging Interpreter...
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border border-amber-300">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
+                  Paging...
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCancelInterpreter}
+                  className="h-8 px-2 text-xs font-bold text-amber-800 hover:text-red-600 hover:bg-amber-100 rounded-lg flex items-center gap-1"
+                >
+                  <X className="w-3.5 h-3.5 text-red-600" />
+                  <span>Cancel</span>
+                </Button>
+              </div>
             ) : (
               <Button
                 size="sm"
@@ -157,9 +175,19 @@ export default function PatientPage() {
                 </p>
               </div>
             </div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900 shrink-0">
-              Connecting...
-            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
+                Connecting...
+              </span>
+              <Button
+                variant="outline"
+                onClick={handleCancelInterpreter}
+                className="bg-white/90 dark:bg-slate-900 border-amber-600 dark:border-amber-400 text-amber-950 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-slate-800 font-extrabold text-xs sm:text-sm h-10 px-4 rounded-xl flex items-center gap-1.5 shadow-sm"
+              >
+                <X className="w-4 h-4 text-red-600" />
+                <span>Cancel / रद्द करें</span>
+              </Button>
+            </div>
           </div>
         ) : sessionStatus !== 'interpreter_connected' && (
           <div className="w-full p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-teal-50 dark:from-indigo-950/30 dark:to-teal-950/30 border border-indigo-200 dark:border-indigo-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">

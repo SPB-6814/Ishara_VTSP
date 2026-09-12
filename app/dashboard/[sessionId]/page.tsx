@@ -24,6 +24,7 @@ import {
   Check,
   AlertTriangle,
   RefreshCw,
+  XCircle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,6 +60,7 @@ export default function DashboardPage() {
     clearAlert,
     sendPlayClip,
     requestInterpreter,
+    cancelInterpreterRequest,
   } = useSessionRealtime({
     sessionId,
   })
@@ -181,7 +183,7 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col">
       {/* Top Navigation */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sticky top-0 z-30 shadow-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-teal-50 border border-teal-200 flex items-center justify-center shrink-0">
               <Image
@@ -239,31 +241,49 @@ export default function DashboardPage() {
               Open Tablet
             </Button>
 
-            <Button
-              size="sm"
-              onClick={handlePageInterpreter}
-              disabled={isPagingInterpreter || sessionStatus === 'interpreter_connected'}
-              className={`
-                text-xs font-bold flex items-center gap-1.5
-                ${sessionStatus === 'interpreter_connected'
-                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
-                }
-              `}
-            >
-              <Video className="w-4 h-4" />
-              {sessionStatus === 'interpreter_connected'
-                ? 'Interpreter Active'
-                : isPagingInterpreter
-                ? 'Paging...'
-                : 'Page Interpreter'}
-            </Button>
+            {sessionStatus === 'interpreter_requested' ? (
+              <div className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200 border border-amber-300">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
+                  Paging...
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={cancelInterpreterRequest}
+                  className="h-8 px-2.5 text-xs font-bold border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 flex items-center gap-1"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Cancel</span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                onClick={handlePageInterpreter}
+                disabled={isPagingInterpreter || sessionStatus === 'interpreter_connected'}
+                className={`
+                  text-xs font-bold flex items-center gap-1.5
+                  ${sessionStatus === 'interpreter_connected'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                    : 'bg-[#4F46E5] hover:bg-[#4338CA] text-white'
+                  }
+                `}
+              >
+                <Video className="w-4 h-4" />
+                {sessionStatus === 'interpreter_connected'
+                  ? 'Interpreter Active'
+                  : isPagingInterpreter
+                  ? 'Paging...'
+                  : 'Page Interpreter'}
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Dashboard Grid */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-5">
+      <div className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-5">
         {/* Emergency Alert Banner (P0 Realtime) */}
         <EmergencyAlertBanner
           alert={activeAlert}
@@ -310,6 +330,15 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={cancelInterpreterRequest}
+                className="text-xs font-bold flex items-center gap-1 bg-white dark:bg-slate-900 border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                Cancel Request
+              </Button>
               <Button
                 size="sm"
                 variant="outline"

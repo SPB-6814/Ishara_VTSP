@@ -25,6 +25,7 @@ export const REALTIME_EVENTS = {
   STATUS_CHANGE: 'status_change',
   GESTURE_TEXT: 'gesture_text',
   NEW_REQUEST: 'new_request',
+  CANCEL_REQUEST: 'cancel_request',
 } as const
 
 /** Canonical fallback UUID for demo session in PostgreSQL */

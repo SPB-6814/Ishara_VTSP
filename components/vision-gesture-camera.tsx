@@ -230,9 +230,25 @@ export function VisionGestureCamera({
             />
             <span className="font-extrabold text-[12px] tracking-wide text-white flex items-center gap-1.5">
               <span>Vision Sign AI Live</span>
-              <span className="text-[10px] uppercase px-1.5 py-0.2 font-mono bg-teal-900/60 border border-teal-500/40 text-teal-300 rounded">
+              <span className="text-[10px] uppercase px-1.5 py-0.5 font-mono bg-teal-900/60 border border-teal-500/40 text-teal-300 rounded">
                 24 ISL Signs
               </span>
+              {cameraOn && (
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-normal flex items-center gap-1 border ${
+                    faceDetected
+                      ? 'bg-blue-950/70 border-blue-400/40 text-blue-300'
+                      : 'bg-black/40 border-white/10 text-gray-400'
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      faceDetected ? 'bg-blue-400 animate-pulse' : 'bg-gray-500'
+                    }`}
+                  />
+                  {faceDetected ? 'ISL + Face' : 'ISL Hand'}
+                </span>
+              )}
             </span>
             {!modelReady && !initError && (
               <span className="text-[10px] text-amber-300 bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded-full animate-pulse">
@@ -319,33 +335,7 @@ export function VisionGestureCamera({
           </div>
         )}
 
-<<<<<<< HEAD
-        {/* Top-left: face + hand tracking indicator when camera is active */}
-        {cameraOn && (
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
-            <span
-              className={`text-xs px-2.5 py-1 rounded-full backdrop-blur-md transition-all flex items-center gap-1.5 border ${
-                faceDetected
-                  ? 'bg-blue-950/70 border-blue-400/40 text-blue-300 shadow-sm shadow-blue-500/20'
-                  : 'bg-black/60 border-white/10 text-gray-400'
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  faceDetected ? 'bg-blue-400 animate-pulse' : 'bg-gray-500'
-                }`}
-              />
-              <span className="font-medium">
-                {faceDetected ? 'ISL + Face' : 'ISL Hand'}
-              </span>
-            </span>
-          </div>
-        )}
-
-        {/* Top-right: confidence ring + label */}
-=======
         {/* Live HUD Pill (active gesture + confidence ring) */}
->>>>>>> 058a4ada457bcec6e44c45fc22205693e8f494a7
         {cameraOn && (
           <div className="absolute top-12 left-3 right-3 z-10 flex items-center justify-between pointer-events-none">
             {lastGesture ? (

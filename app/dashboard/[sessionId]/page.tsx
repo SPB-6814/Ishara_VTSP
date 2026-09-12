@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import type { GestureTextPayload } from '@/hooks/use-session-realtime'
 import Image from 'next/image'
 import { EmergencyAlertBanner } from '@/components/emergency-alert-banner'
-import { TranscriptFeed } from '@/components/transcript-feed'
+import { TranscriptFeed, isSevereOrCriticalEvent } from '@/components/transcript-feed'
+import { DoctorPatientChat } from '@/components/doctor-patient-chat'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition'
 import { searchClips } from '@/lib/isl-clips'
@@ -26,6 +27,7 @@ import {
   AlertTriangle,
   RefreshCw,
   XCircle,
+  ShieldAlert,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -244,6 +246,7 @@ export default function DashboardPage() {
     sendPlayClip,
     requestInterpreter,
     cancelInterpreterRequest,
+    setEvents,
   } = useSessionRealtime({
     sessionId,
     onGestureReceived: handleGestureReceived,
@@ -264,7 +267,7 @@ export default function DashboardPage() {
     }
   }, [transcript])
 
-  // Fetch session details if available
+  // Fetch session details and previous events if available
   useEffect(() => {
     fetch(`/api/session?id=${sessionId}`)
       .then((res) => res.json())
@@ -274,7 +277,20 @@ export default function DashboardPage() {
         }
       })
       .catch(() => {})
-  }, [sessionId])
+
+    fetch(`/api/session/${sessionId}/events`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.events && Array.isArray(data.events) && data.events.length > 0) {
+          setEvents((prev) => {
+            const existingIds = new Set(prev.map((e) => e.id))
+            const newEvents = data.events.filter((e: any) => !existingIds.has(e.id))
+            return [...prev, ...newEvents]
+          })
+        }
+      })
+      .catch(() => {})
+  }, [sessionId, setEvents])
 
   const handleToggleListening = () => {
     if (isListening) {
@@ -580,11 +596,14 @@ export default function DashboardPage() {
 
           <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
             <CardContent className="p-3 sm:p-4">
-              <span className="text-xs text-slate-500 font-medium">Audit Events Logged</span>
+              <span className="text-xs text-slate-500 font-medium">Critical Audit Events</span>
               <div className="flex items-center gap-2 mt-1">
-                <FileText className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                <ShieldAlert className="w-4 h-4 text-red-600 dark:text-red-400" />
                 <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                  {events.length} Interactions Recorded
+                  {events.filter(isSevereOrCriticalEvent).length} Severe Cases
+                </span>
+                <span className="text-xs text-slate-400 font-normal">
+                  ({events.length} total)
                 </span>
               </div>
             </CardContent>
@@ -679,6 +698,14 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
+            {/* Two-Way Patient-Doctor Chat Window (Below ISL Sign Input Block) */}
+            <DoctorPatientChat
+              events={events}
+              patientDisplayName={patientDisplayName}
+              onSendISLPhrase={handleSendISLPhrase}
+              isSearching={isSearching}
+            />
+
             {/* Video Call Tile (When LiveKit is Connected) */}
             {sessionStatus === 'interpreter_connected' && (
               <Card className="bg-indigo-950 text-white border-2 border-indigo-500 overflow-hidden shadow-xl">
@@ -715,17 +742,22 @@ export default function DashboardPage() {
             <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col">
               <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[#084C5B]" />
-                    Live Interaction Audit Trail
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-[#084C5B]" />
+                      Live Interaction Audit Trail
+                    </CardTitle>
+                    <span className="text-[10px] font-bold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 px-1.5 py-0.5 rounded">
+                      Critical Only
+                    </span>
+                  </div>
                   <span className="text-xs text-slate-400">
-                    {events.length} events
+                    {events.filter(isSevereOrCriticalEvent).length} severe
                   </span>
                 </div>
               </CardHeader>
               <CardContent className="pt-4 flex-1 overflow-y-auto max-h-[600px]">
-                <TranscriptFeed events={events} />
+                <TranscriptFeed events={events} initialFilterSevere={true} />
               </CardContent>
             </Card>
           </div>

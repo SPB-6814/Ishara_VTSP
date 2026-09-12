@@ -58,6 +58,7 @@ export function VisionGestureCamera({
 
   const [cameraOn,        setCameraOn]        = useState(false)
   const [modelReady,      setModelReady]      = useState(false)
+  const [faceDetected,    setFaceDetected]    = useState(false)
   const [pendingConf,     setPendingConf]     = useState(0)
   const [lastGesture,     setLastGesture]     = useState<DetectedGesture | null>(null)
   const [wordBuffer,      setWordBuffer]      = useState<string[]>([])
@@ -114,10 +115,13 @@ export function VisionGestureCamera({
         return
       }
 
-      const { gesture, landmarks, pendingConfidence } = classifyFrame(video, ts)
+      const { gesture, landmarks, pendingConfidence, hasFace } = classifyFrame(video, ts)
 
       drawSkeleton(landmarks)
       setPendingConf(pendingConfidence)
+      if (hasFace !== undefined) {
+        setFaceDetected(hasFace)
+      }
 
       if (gesture) {
         setLastGesture(gesture)
@@ -180,6 +184,7 @@ export function VisionGestureCamera({
     }
     setCameraOn(false)
     setPendingConf(0)
+    setFaceDetected(false)
     onCameraStateChange?.(false)
   }, [onCameraStateChange])
 
@@ -243,6 +248,28 @@ export function VisionGestureCamera({
               </svg>
             </div>
             <p className="text-slate-400 text-sm font-medium">Camera is off</p>
+          </div>
+        )}
+
+        {/* Top-left: face + hand tracking indicator when camera is active */}
+        {cameraOn && (
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+            <span
+              className={`text-xs px-2.5 py-1 rounded-full backdrop-blur-md transition-all flex items-center gap-1.5 border ${
+                faceDetected
+                  ? 'bg-blue-950/70 border-blue-400/40 text-blue-300 shadow-sm shadow-blue-500/20'
+                  : 'bg-black/60 border-white/10 text-gray-400'
+              }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  faceDetected ? 'bg-blue-400 animate-pulse' : 'bg-gray-500'
+                }`}
+              />
+              <span className="font-medium">
+                {faceDetected ? 'ISL + Face' : 'ISL Hand'}
+              </span>
+            </span>
           </div>
         )}
 

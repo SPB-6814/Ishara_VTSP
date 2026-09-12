@@ -6,6 +6,8 @@ import {
   getSessionChannel,
   REALTIME_EVENTS,
   INTERPRETER_REQUESTS_CHANNEL,
+  HOSPITAL_ALERTS_CHANNEL,
+  GLOBAL_HOSPITAL_ALERTS_BC,
 } from '@/lib/realtime'
 import type {
   PictogramAlertPayload,
@@ -14,6 +16,7 @@ import type {
   SessionStatus,
   SessionEvent,
   GestureTextPayload,
+  ClipPriority,
 } from '@/lib/types'
 
 // Re-export so consumers can import GestureTextPayload from this hook
@@ -49,10 +52,14 @@ export function useSessionRealtime({
 
       if (type === REALTIME_EVENTS.PICTOGRAM_ALERT) {
         const alertData = payload as PictogramAlertPayload
-        setActiveAlert(alertData)
-        onAlertReceived?.(alertData)
+        // Only set activeAlert (interruptive banner + chime) if the alert is classified as URGENT!
+        const isUrgent = alertData.isUrgent ?? (alertData.priority === 'P0' || alertData.category?.toLowerCase().includes('emergency'))
+        if (isUrgent) {
+          setActiveAlert(alertData)
+          onAlertReceived?.(alertData)
+        }
 
-        // Append to audit trail
+        // Always append all events to audit trail
         setEvents((prev) => [
           {
             id: `evt-${Date.now()}-${Math.random()}`,
@@ -186,17 +193,27 @@ export function useSessionRealtime({
 
   /** Broadcast a pictogram tap event */
   const sendPictogramAlert = useCallback(
-    (clipKey: string, label: string, category = 'Emergency') => {
+    (
+      clipKey: string,
+      label: string,
+      category = 'Emergency',
+      priority: ClipPriority = 'P1',
+      isUrgent = false,
+      patientName?: string
+    ) => {
       const payload: PictogramAlertPayload = {
         type: 'pictogram_alert',
         sessionId,
+        patientName,
         clipKey,
         label,
         category,
+        priority,
+        isUrgent,
         timestamp: new Date().toISOString(),
       }
 
-      // 1. Post to local broadcast channel
+      // 1. Post to local session broadcast channel
       if (broadcastChannelRef.current) {
         broadcastChannelRef.current.postMessage({
           type: REALTIME_EVENTS.PICTOGRAM_ALERT,
@@ -204,7 +221,7 @@ export function useSessionRealtime({
         })
       }
 
-      // 2. Post to Supabase Realtime channel
+      // 2. Post to Supabase Realtime session channel
       if (supabaseChannelRef.current) {
         supabaseChannelRef.current.send({
           type: 'broadcast',
@@ -213,8 +230,45 @@ export function useSessionRealtime({
         })
       }
 
-      // Update local state
-      setActiveAlert(payload)
+      // 3. If URGENT, broadcast to hospital-wide alerts channel for doctors on /dashboard!
+      if (isUrgent) {
+        try {
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const globalAlertsBC = new BroadcastChannel(GLOBAL_HOSPITAL_ALERTS_BC)
+            globalAlertsBC.postMessage({
+              type: REALTIME_EVENTS.EMERGENCY_ALERT,
+              payload,
+            })
+            setTimeout(() => {
+              try {
+                globalAlertsBC.close()
+              } catch { }
+            }, 3000)
+          }
+        } catch { }
+
+        try {
+          if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+            const supabase = createClient()
+            const globalChannel = supabase.channel(HOSPITAL_ALERTS_CHANNEL)
+            globalChannel.subscribe((status: string) => {
+              if (status === 'SUBSCRIBED') {
+                globalChannel.send({
+                  type: 'broadcast',
+                  event: REALTIME_EVENTS.EMERGENCY_ALERT,
+                  payload,
+                })
+              }
+            })
+          }
+        } catch { }
+      }
+
+      // Update local state ONLY if URGENT!
+      if (isUrgent) {
+        setActiveAlert(payload)
+      }
+
       setEvents((prev) => [
         {
           id: `evt-${Date.now()}`,
@@ -235,7 +289,7 @@ export function useSessionRealtime({
           eventType: 'pictogram',
           payload,
         }),
-      }).catch(() => {})
+      }).catch(() => { })
     },
     [sessionId]
   )
@@ -318,7 +372,7 @@ export function useSessionRealtime({
           status: newStatus,
           activeMode: newStatus === 'interpreter_connected' ? 'live_interpreter' : 'pictogram',
         }),
-      }).catch(() => {})
+      }).catch(() => { })
     },
     [sessionId]
   )
@@ -349,9 +403,9 @@ export function useSessionRealtime({
           setTimeout(() => {
             try {
               bc.close()
-            } catch {}
+            } catch { }
           }, 3000)
-        } catch {}
+        } catch { }
       }
 
       // 3. Broadcast to Supabase Realtime channel for interpreters
@@ -413,9 +467,9 @@ export function useSessionRealtime({
           setTimeout(() => {
             try {
               bc.close()
-            } catch {}
+            } catch { }
           }, 3000)
-        } catch {}
+        } catch { }
       }
 
       // 3. Broadcast cancellation over Supabase Realtime channel
@@ -447,7 +501,7 @@ export function useSessionRealtime({
             activeMode: 'pictogram',
           }),
         })
-      } catch {}
+      } catch { }
     },
     [sessionId, sendStatusChange]
   )
@@ -493,7 +547,7 @@ export function useSessionRealtime({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventType: 'gesture_text', payload }),
-      }).catch(() => {})
+      }).catch(() => { })
     },
     [sessionId]
   )

@@ -87,9 +87,12 @@ export interface InterpreterPresence {
 export interface PictogramAlertPayload {
   type: 'pictogram_alert'
   sessionId: string
+  patientName?: string
   clipKey: string
   label: string
   category: string
+  priority?: ClipPriority
+  isUrgent?: boolean
   timestamp: string
 }
 

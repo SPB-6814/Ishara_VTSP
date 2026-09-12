@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
 import { PictogramGrid } from '@/components/pictogram-grid'
@@ -20,11 +20,23 @@ import { toast } from 'sonner'
 
 export default function PatientPage() {
   const params = useParams<{ sessionId: string }>()
-  const sessionId = params.sessionId || 'demo-session'
+  const sessionId = params.sessionId || '00000000-0000-0000-0000-000000000001'
 
   const [lastAlertText, setLastAlertText] = useState<string | null>(null)
   const [lastAlertHindi, setLastAlertHindi] = useState<string | null>(null)
   const [showingConfirmation, setShowingConfirmation] = useState(false)
+  const [bedName, setBedName] = useState('Bedside Kiosk (ISL)')
+
+  useEffect(() => {
+    fetch(`/api/session?id=${sessionId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.session?.patient_display_name) {
+          setBedName(data.session.patient_display_name)
+        }
+      })
+      .catch(() => {})
+  }, [sessionId])
 
   const {
     activeClip,
@@ -56,8 +68,8 @@ export default function PatientPage() {
 
   const handleRequestInterpreter = () => {
     requestInterpreter({
-      hospitalName: 'Ishara Demo Hospital (ICU Bed 4)',
-      patientName: 'Patient Bedside (ISL)',
+      hospitalName: 'Apollo Multi-Specialty Hospital',
+      patientName: bedName,
       note: 'Bedside request from patient tablet',
     })
     toast.info('Paging ISL interpreter...')
@@ -85,7 +97,7 @@ export default function PatientPage() {
                   Ishara • इशारा
                 </h1>
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300">
-                  ISL Bedside Kiosk
+                  {bedName}
                 </span>
               </div>
               <p className="text-xs text-slate-500 font-medium">

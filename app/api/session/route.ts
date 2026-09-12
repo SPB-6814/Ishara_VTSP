@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { toValidSessionUuid } from '@/lib/realtime'
 
-// In-memory fallback session store for zero-friction local testing
+// In-memory fallback session store if DB unreachable
 const inMemorySessions = new Map<string, any>()
 
 export async function POST(request: Request) {
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const patientName = body.patientDisplayName || 'Bedside Patient'
     const hospitalId = body.hospitalId || 'a0000000-0000-0000-0000-000000000001'
 
-    // Try Supabase if configured
+    // Try Supabase service client
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
         const supabase = createServiceClient()
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       status: 'active',
       active_mode: 'pictogram',
       assigned_interpreter_id: null,
-      created_by: 'demo-doctor',
+      created_by: null,
       created_at: new Date().toISOString(),
       closed_at: null,
     }
@@ -58,34 +58,45 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
-  const id = searchParams.get('id')
+  const rawId = searchParams.get('id')
 
-  if (id) {
-    const local = inMemorySessions.get(id)
+  if (rawId) {
+    const validUuid = toValidSessionUuid(rawId)
+
+    // Check in-memory store first
+    const local = inMemorySessions.get(validUuid) || inMemorySessions.get(rawId)
     if (local) {
       return NextResponse.json({ session: local })
     }
 
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    // Query Supabase using service role to bypass patient RLS restriction
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
-        const supabase = await createClient()
-        const { data } = await supabase.from('sessions').select().eq('id', id).single()
+        const supabase = createServiceClient()
+        const { data } = await supabase.from('sessions').select('*').eq('id', validUuid).single()
         if (data) return NextResponse.json({ session: data })
       } catch {}
     }
   }
 
-  // Return demo default session if none found
-  const demoId = 'demo-session-1'
-  const session = inMemorySessions.get(demoId) || {
-    id: demoId,
+  // Default to Bed 4A canonical session
+  const defaultId = '00000000-0000-0000-0000-000000000001'
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const supabase = createServiceClient()
+      const { data } = await supabase.from('sessions').select('*').eq('id', defaultId).single()
+      if (data) return NextResponse.json({ session: data })
+    } catch {}
+  }
+
+  const defaultSession = {
+    id: defaultId,
     hospital_id: 'a0000000-0000-0000-0000-000000000001',
-    patient_display_name: 'Patient Bed 3B',
+    patient_display_name: 'Bed 4A - Ramesh Kumar (ISL)',
     status: 'active',
     active_mode: 'pictogram',
     created_at: new Date().toISOString(),
   }
-  inMemorySessions.set(demoId, session)
 
-  return NextResponse.json({ session })
+  return NextResponse.json({ session: defaultSession })
 }

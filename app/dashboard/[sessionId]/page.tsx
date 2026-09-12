@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { EmergencyAlertBanner } from '@/components/emergency-alert-banner'
 import { TranscriptFeed } from '@/components/transcript-feed'
@@ -9,6 +9,7 @@ import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition'
 import { searchClips } from '@/lib/isl-clips'
 import {
+  ArrowLeft,
   Video,
   Mic,
   MicOff,
@@ -37,8 +38,9 @@ import {
 import { toast } from 'sonner'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const params = useParams<{ sessionId: string }>()
-  const sessionId = params.sessionId || 'demo-session'
+  const sessionId = params.sessionId || '00000000-0000-0000-0000-000000000001'
 
   const [inputText, setInputText] = useState('')
   const [isSearching, setIsSearching] = useState(false)
@@ -125,7 +127,7 @@ export default function DashboardPage() {
   const handlePageInterpreter = () => {
     setIsPagingInterpreter(true)
     requestInterpreter({
-      hospitalName: 'Ishara Demo Hospital',
+      hospitalName: 'Apollo Multi-Specialty Hospital',
       patientName: patientDisplayName,
       note: 'Staff station remote paging',
     })
@@ -207,6 +209,16 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/dashboard')}
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white flex items-center gap-1 border border-slate-300 dark:border-slate-700"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Bed Roster</span>
+            </Button>
+
             <Button
               variant="outline"
               size="sm"

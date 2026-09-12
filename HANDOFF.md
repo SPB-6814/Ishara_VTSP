@@ -6,9 +6,9 @@
 
 ---
 
-## 1. Executive Summary & Root Cause Post-Mortem
+## 1. Executive Summary & Forensic Audit
 
-During the initial testing of Phase 1, buttons on `/login` appeared non-responsive, the Staff Station and Interpreter Portal would not open, and the Patient Kiosk seemed to send alerts into a void. A deep forensic audit revealed the exact root causes:
+During initial testing of Phase 1, buttons on `/login` appeared non-responsive, the Staff Station and Interpreter Portal would not open, and the Patient Kiosk seemed to send alerts into a void. A deep forensic audit revealed the exact root causes:
 
 1. **Next.js 16 Middleware Lockdown (`proxy.ts` -> `lib/supabase/middleware.ts`)**:
    - `lib/supabase/middleware.ts` only whitelisted `/login`, `/auth`, `/patient`, and `/api`.
@@ -27,29 +27,32 @@ During the initial testing of Phase 1, buttons on `/login` appeared non-responsi
 
 ---
 
-## 2. Master Division of Labor
+## 2. Team Division of Labor
+
+The project is divided across team members with zero overlap:
 
 ```
-+-------------------------------------------------------------------------+
-|                              ISHARA PLATFORM                            |
-+------------------------------------+------------------------------------+
-|         TRACK A: ME (VIBHAV)       |        TRACK B: TEAMMATE           |
-|  Full-Stack, Realtime & UX Lead    |   Vision AI & Multimedia Lead      |
-+------------------------------------+------------------------------------+
-| 1. Fix Middleware & Demo Bypass    | 1. MediaPipe Gesture Model (P3)    |
-| 2. Synchronize Demo Sessions       | 2. Clinical Sign Classifier        |
-| 3. Fix IPC & Realtime Signaling    | 3. Stream Gestures to Realtime     |
-| 4. Fix Postgres Events UUID Bug    | 4. Record/Curate ISL Video Clips   |
-| 5. Patient Kiosk 1-Tap Interp UX   | 5. Upload Clips to Bucket/Storage  |
-| 6. Doctor Station QR Tablet Pair   | 6. Patient Camera Privacy Overlay  |
-| 7. 60s Fallback Escalation Timer   | 7. Edge Landmark Performance Tuning|
-| 8. Interpreter Audio Chime Alarm   |                                    |
-+------------------------------------+------------------------------------+
++---------------------------------------------------------------------------------------+
+|                                    ISHARA PLATFORM                                    |
++------------------------------------+--------------------------------------------------+
+|           VIBHAV (ME)              |                 TEJAS (TEAMMATE 1)               |
+|    Full-Stack, Realtime & UX       |         Vision AI & ISL Video Media Lead         |
++------------------------------------+--------------------------------------------------+
+| 1. Fix Middleware & Demo Bypass    | 1. MediaPipe Tasks Vision Gesture Model (P3)     |
+| 2. Synchronize Demo Sessions       | 2. Clinical Sign Classifier (Debounce & Filter)  |
+| 3. Fix IPC & Realtime Signaling    | 3. Stream Recognized Signs to Realtime Pipeline  |
+| 4. Fix Postgres Events UUID Bug    | 4. Curate/Record Complete 44 ISL Video Clips     |
+| 5. Patient Kiosk 1-Tap Interp UX   | 5. Encode H.264/AAC & Place in public/videos/    |
+| 6. Doctor Station QR Tablet Pair   | 6. Upload Clips to Supabase Storage 'isl-clips'  |
+| 7. 60s Fallback Escalation Timer   | 7. Camera Privacy Shutter & Landmarker Overlay   |
+| 8. Interpreter Audio Chime Alarm   |                                                  |
++------------------------------------+--------------------------------------------------+
+* Note: Teammate 2 is independently developing the P2 AI Sign Video Fallback pipeline.
 ```
 
 ---
 
-## 3. Detailed Tasks for ME (Vibhav - Track A)
+## 3. Detailed Tasks for VIBHAV (Full-Stack, Realtime & UX)
 
 ### Task A1: Fix Middleware & Demo Mode Auth Bypass
 - **Files:** `lib/supabase/middleware.ts`, `proxy.ts`, `app/auth/hospital/page.tsx`, `app/auth/interpreter/page.tsx`
@@ -63,7 +66,7 @@ During the initial testing of Phase 1, buttons on `/login` appeared non-responsi
 - **Actions:**
   1. Make "1. Open Patient Tablet Kiosk", "2. Open Staff Station", and "3. Open Interpreter Portal" all target the canonical shared session ID: `demo-session`.
   2. Map `demo-session` to UUID `00000000-0000-0000-0000-000000000001` via `toValidSessionUuid`.
-  3. This guarantees that clicking the buttons across different tabs or devices connects all parties to the exact same WebRTC room and Supabase Realtime channel.
+  3. Guarantees that opening buttons across different tabs or devices connects all parties to the exact same WebRTC room and Supabase Realtime channel.
 
 ### Task A3: Fix Realtime Signaling & Channel Teardown
 - **Files:** `hooks/use-session-realtime.ts`, `app/interpreter/dashboard/page.tsx`
@@ -104,115 +107,118 @@ During the initial testing of Phase 1, buttons on `/login` appeared non-responsi
 
 ---
 
-## 4. Detailed Tasks for TEAMMATE (Track B)
+## 4. Detailed Tasks for TEJAS (Vision AI & ISL Video Media)
 
-### Task B1: MediaPipe Tasks Vision Hand Landmarker (Phase 2 / P3)
+> **IMPORTANT:** Our backend fuzzy-match router (`lib/isl-clips.ts`), seed definitions (`lib/seed-clips.ts`), and Supabase PostgreSQL table (`public.isl_clips`) **already support all 44 phrases across all 7 categories**. Your task is to provide the actual video files and build the MediaPipe gesture recognizer.
+
+### Task B1: The Complete ISL Video Clips Library (44 Phrases)
+- **Target Folders:** `public/videos/*.mp4` AND Supabase Storage bucket `isl-clips`
+- **Specifications:**
+  - Video format: **MP4 (H.264 video, AAC audio)**.
+  - Resolution: 720p (1280x720) or 1080p, 15–30 seconds each, well-lit, plain/neutral background.
+  - Filename format: Exact lowercase slug matching `storage_path` in `lib/seed-clips.ts` (e.g. `chest-pain.mp4`).
+  - Sourcing: Record a team member performing the signs, OR source from open ISL datasets (**INCLUDE dataset**, **ISLRTC videos**).
+
+#### Complete Master Phrase List to Provide:
+
+| Category | Filename (`storage_path`) | English Label | Hindi Text | Priority |
+| :--- | :--- | :--- | :--- | :--- |
+| **Emergency** | `chest-pain.mp4` | Chest pain | सीने में दर्द | P0 |
+| **Emergency** | `cant-breathe.mp4` | Can't breathe | साँस लेने में तकलीफ़ | P0 |
+| **Emergency** | `im-dizzy.mp4` | I'm dizzy | चक्कर आ रहे हैं | P0 |
+| **Emergency** | `feel-very-sick.mp4` | I feel very sick | बहुत बीमार महसूस कर रहा हूँ | P0 |
+| **Emergency** | `call-doctor-now.mp4` | Call doctor now | डॉक्टर को तुरंत बुलाएं | P0 |
+| **Emergency** | `emergency.mp4` | Emergency | आपातकालीन | P0 |
+| **Emergency** | `help-me.mp4` | Help me | मेरी मदद करो | P0 |
+| **Pain** | `pain-level.mp4` | Pain level 1-10 | दर्द का स्तर (१-१०) | P0 |
+| **Pain** | `head-hurts.mp4` | My head hurts | सिर दर्द | P0 |
+| **Pain** | `stomach-hurts.mp4` | My stomach hurts | पेट दर्द | P0 |
+| **Pain** | `chest-hurts.mp4` | My chest hurts | छाती में दर्द | P0 |
+| **Pain** | `back-hurts.mp4` | My back hurts | पीठ दर्द | P0 |
+| **Pain** | `pain-started-now.mp4` | Pain started now | दर्द अभी शुरू हुआ | P0 |
+| **Allergies** | `i-have-allergy.mp4` | I have allergy | एलर्जी है | P0 |
+| **Allergies** | `allergic-penicillin.mp4` | Allergic to penicillin | पेनिसिलिन एलर्जी | P0 |
+| **Allergies** | `allergic-aspirin.mp4` | Allergic to aspirin | एस्पिरिन एलर्जी | P0 |
+| **Allergies** | `allergic-latex.mp4` | Allergic to latex | लेटेक्स एलर्जी | P0 |
+| **Allergies** | `no-known-allergy.mp4` | No known allergy | कोई एलर्जी नहीं | P0 |
+| **Basic needs** | `water.mp4` | Water | पानी | P1 |
+| **Basic needs** | `toilet.mp4` | Toilet | शौचालय | P1 |
+| **Basic needs** | `cold.mp4` | Cold | ठंड लग रही है | P1 |
+| **Basic needs** | `hot.mp4` | Hot | गर्मी लग रही है | P1 |
+| **Basic needs** | `blanket.mp4` | Blanket | कंबल चाहिए | P1 |
+| **Basic needs** | `hungry.mp4` | Hungry | भूख लगी है | P1 |
+| **Basic needs** | `nausea.mp4` | Nausea | जी घबराना | P1 |
+| **Basic needs** | `vomit.mp4` | Vomit | उल्टी | P1 |
+| **Medical history** | `diabetic.mp4` | Diabetic | मधुमेह / शुगर | P1 |
+| **Medical history** | `heart-condition.mp4` | Heart condition | दिल की बीमारी | P1 |
+| **Medical history** | `high-blood-pressure.mp4` | High blood pressure | उच्च रक्तचाप / बीपी | P1 |
+| **Medical history** | `pregnant.mp4` | Pregnant | गर्भवती | P1 |
+| **Medical history** | `surgery-before.mp4` | Surgery before | पहले ऑपरेशन हुआ है | P1 |
+| **Medical history** | `blood-type.mp4` | Blood type | रक्त समूह | P1 |
+| **Doctor -> patient** | `you-are-safe.mp4` | You are safe | आप सुरक्षित हैं | P1 |
+| **Doctor -> patient** | `we-are-helping.mp4` | We are helping you | हम आपकी मदद कर रहे हैं | P1 |
+| **Doctor -> patient** | `do-you-understand.mp4` | Do you understand? | क्या आप समझ रहे हैं? | P1 |
+| **Doctor -> patient** | `take-medicine.mp4` | Take this medicine | यह दवाई लीजिए | P1 |
+| **Doctor -> patient** | `stay-still.mp4` | Stay still | शांत / स्थिर रहिए | P1 |
+| **Doctor -> patient** | `relax.mp4` | Relax | शांत हो जाइए | P1 |
+| **Doctor -> patient** | `good.mp4` | Good | अच्छा | P1 |
+| **Consent** | `do-you-agree.mp4` | Do you agree? | क्या आप सहमत हैं? | P2 |
+| **Consent** | `sign-here.mp4` | Sign here | यहाँ हस्ताक्षर करें | P2 |
+| **Consent** | `need-to-do-test.mp4` | We need to do a test | हमें एक जांच करनी होगी | P2 |
+| **Consent** | `this-will-help.mp4` | This will help you | इससे आपको आराम मिलेगा | P2 |
+| **Consent** | `family-here.mp4` | Do you have family here? | क्या आपके परिजन यहाँ हैं? | P2 |
+
+---
+
+### Task B2: MediaPipe Tasks Vision Hand Gesture Tracker (Phase 2 / P3)
 - **Files to Create/Edit:** `components/vision-gesture-camera.tsx`, `app/patient/[sessionId]/page.tsx`
-- **Package to Use:** `@mediapipe/tasks-vision` (already compatible with Next.js/React 19).
+- **Package to Use:** `@mediapipe/tasks-vision`
 - **Actions:**
-  1. Create `components/vision-gesture-camera.tsx` rendering a small, non-intrusive camera feed with patient consent toggle ("Enable Sign Recognition / कैमरा ऑन करें").
-  2. Initialize `@mediapipe/tasks-vision` `HandLandmarker` running locally in WebAssembly.
+  1. Create `components/vision-gesture-camera.tsx` rendering the patient tablet front camera.
+  2. Initialize `@mediapipe/tasks-vision` `HandLandmarker` in WebAssembly (client-side, 30 FPS).
   3. Detect 21 3D hand landmarks in real time (wrist, thumb, index, middle, ring, pinky).
-  4. Draw lightweight skeleton overlays on canvas when hands are detected.
+  4. Render skeleton overlays on `<canvas>` over the camera preview.
 
-### Task B2: Rule-Based / Feature Classifier for Clinical Gestures
-- **File:** `lib/gesture-classifier.ts`
+### Task B3: Rule-Based / Heuristic Gesture Classifier
+- **File to Create:** `lib/gesture-classifier.ts`
 - **Actions:**
-  1. Implement geometric heuristic rules using landmark distances and angles:
+  1. Implement geometric heuristic rules:
      - **Help Me / Emergency**: Open palm held up, fingers spread, waving or steady.
      - **Chest Pain**: Clenched fist held against torso/chest region.
-     - **Yes / Agree**: Thumbs up (thumb pointing up, fingers curled).
+     - **Yes / Agree**: Thumbs up.
      - **No / Disagree**: Index finger wagging or flat palm waving side-to-side.
-     - **Pain Level 1 to 5**: Extended finger count (1 to 5 fingers extended).
-  2. Include a debounce filter (e.g. gesture must be held for 800ms to prevent accidental triggers).
+     - **Pain Level 1 to 5**: Extended finger count (1 to 5 fingers).
+  2. Include an 800ms debounce filter to prevent accidental triggers.
 
-### Task B3: Stream Detected Gestures to Realtime Pipeline
+### Task B4: Stream Detected Gestures to Realtime Pipeline
 - **File:** Integrate with `hooks/use-session-realtime.ts`
 - **Actions:**
-  1. When a gesture meets confidence threshold (>80%), broadcast via `REALTIME_EVENTS.GESTURE_TEXT`:
+  1. When confidence > 80%, broadcast `REALTIME_EVENTS.GESTURE_TEXT`:
      ```typescript
      broadcastChannelRef.current?.postMessage({
        type: REALTIME_EVENTS.GESTURE_TEXT,
        payload: {
-         text: 'Help Me (Emergency)',
-         confidence: 0.94,
+         text: 'Chest Pain',
+         confidence: 0.92,
          timestamp: new Date().toISOString(),
        }
      })
      ```
-  2. Also persist to PostgreSQL via `POST /api/patient/[sessionId]/events` with `eventType: 'gesture_text'`.
-  3. The Doctor Station will instantly display it in the Live Interaction Audit Trail.
-
-### Task B4: Curate & Provide 8-10 Essential ISL Video Clips (Phase 3 / P2)
-- **Target Location:** `public/videos/*.mp4` AND/OR Supabase Storage bucket `isl-clips`
-- **Actions:**
-  1. Record or source short (5–15 second), clean MP4 clips for core clinical phrases:
-     - `chest-pain.mp4` (सीने में दर्द)
-     - `cant-breathe.mp4` (साँस लेने में तकलीफ़)
-     - `water.mp4` (पानी)
-     - `toilet.mp4` (शौचालय)
-     - `you-are-safe.mp4` (आप सुरक्षित हैं)
-     - `we-are-helping.mp4` (हम आपकी मदद कर रहे हैं)
-     - `take-medicine.mp4` (यह दवाई लीजिए)
-     - `stay-still.mp4` (हिलिए मत / शांत रहिए)
-  2. Ensure video encoding is H.264/AAC MP4 for universal iOS and Android browser playback.
-  3. Place files in `public/videos/` matching the keys in `lib/seed-clips.ts`.
-
-### Task B5: Camera Privacy & Accessibility Overlay
-- **File:** `components/vision-gesture-camera.tsx`
-- **Actions:**
-  1. Provide a visible "Camera Active" green badge and privacy shutter toggle.
-  2. Include high-contrast Indian Sign Language icon indicator so Deaf patients know their signs are being translated.
+  2. Post to `/api/patient/[sessionId]/events` with `eventType: 'gesture_text'`.
+  3. The Doctor Station's Live Transcript Feed will display the recognized sign in real time.
 
 ---
 
-## 5. System Architecture & Realtime Data Flow
+## 5. Verification Checklist Before Final Submission
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Patient as Bedside Patient (Tablet)
-    actor Doctor as Doctor / Nurse (Station)
-    actor Interpreter as ISL Interpreter (Portal)
-
-    Note over Patient,Interpreter: Canonical Session: demo-session (UUID: 00000000-0000-0000-0000-000000000001)
-
-    alt P0: Emergency Pictogram Alert
-        Patient->>Doctor: Broadcast pictogram_alert (Chest Pain)
-        Doctor->>Doctor: Web Audio Chime (523Hz->659Hz) + Red Flashing Banner
-        Doctor->>Patient: Broadcast play_clip ("We are helping you")
-        Patient->>Patient: ISL Video Player plays sign video
-    end
-
-    alt P1: Remote ISL WebRTC Video Relay
-        Patient->>Interpreter: requestInterpreter ("Bed 4A needs ISL Relay")
-        Interpreter->>Interpreter: Incoming Emergency Call Alert + Ring
-        Interpreter->>Patient: Accept Call (status -> interpreter_connected)
-        Interpreter->>Interpreter: Join LiveKit Room ("demo-session")
-        Patient->>Patient: Mount LiveKitVideoCall ("demo-session")
-        Note over Patient,Interpreter: 2-Party WebRTC Video Active (wss://ishara-o5m31j5u.livekit.cloud)
-    end
-
-    alt P3: Vision Sign Recognition (Teammate Track)
-        Patient->>Patient: Camera + MediaPipe tracks 21 hand landmarks
-        Patient->>Doctor: Broadcast gesture_text ("Sign: Need Water [95%]")
-        Doctor->>Doctor: Live Audit Trail logs gesture event
-    end
-```
-
----
-
-## 6. Verification Checklist Before Final Submission
-
-Before pushing changes to `main` or submitting the project:
-
-- [ ] Run `bun run lint` (must exit with 0 errors).
-- [ ] Run `bun run build` (Next.js 16 build must compile cleanly).
-- [ ] Test multi-tab loop:
-  1. Open `http://localhost:3000/login`
-  2. Click "1. Open Patient Tablet Kiosk" (Tab 1)
-  3. Click "2. Open Staff Station" (Tab 2)
-  4. Click "3. Open Interpreter Portal" (Tab 3)
-  5. Tap "Chest Pain" on Tab 1 $\rightarrow$ Verify Tab 2 chimes and shows red alert.
-  6. Tap "Request Interpreter" on Tab 1 $\rightarrow$ Verify Tab 3 rings with incoming call.
-  7. Click "Accept Call & Join Video" on Tab 3 $\rightarrow$ Verify both Tab 1 and Tab 3 connect camera/mic on LiveKit WebRTC.
+- [ ] Run `bun run lint` (0 errors).
+- [ ] Run `bun run build` (Next.js 16 compiles cleanly).
+- [ ] Multi-tab test:
+  1. Tab 1: `http://localhost:3000/patient/demo-session`
+  2. Tab 2: `http://localhost:3000/dashboard/demo-session`
+  3. Tab 3: `http://localhost:3000/interpreter/dashboard`
+  4. Tap "Chest Pain" on Tab 1 $\rightarrow$ Tab 2 sounds audio chime and flashes red alert banner.
+  5. Tap "Request Interpreter" on Tab 1 $\rightarrow$ Tab 3 rings with incoming call.
+  6. Click "Accept Call & Join Video" on Tab 3 $\rightarrow$ LiveKit WebRTC 2-party video connects Tab 1 & Tab 3.
+  7. Clinician types "take medicine" on Tab 2 $\rightarrow$ Tab 1 plays `take-medicine.mp4`.
+  8. Patient makes gesture on Tab 1 camera $\rightarrow$ Tab 2 transcript displays detected sign text.

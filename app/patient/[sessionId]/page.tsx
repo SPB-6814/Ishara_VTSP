@@ -7,6 +7,7 @@ import { PictogramGrid } from '@/components/pictogram-grid'
 import { ISLVideoPlayer } from '@/components/isl-video-player'
 import { StaffControlsDrawer } from '@/components/staff-controls-drawer'
 import { LiveKitVideoCall } from '@/components/livekit-video-call'
+import { VisionGestureCamera } from '@/components/vision-gesture-camera'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import type { DetailedPictogram } from '@/lib/pictograms'
 import {
@@ -17,6 +18,64 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+
+// ─── Collapsible sign-language camera card ──────────────────────────────────────────
+
+function GestureCameraCard({
+  sendGestureText,
+}: {
+  sendGestureText: (text: string, confidence: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-gray-900/50 overflow-hidden">
+      {/* Header / toggle */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+        aria-expanded={open}
+        aria-controls="gesture-camera-panel"
+      >
+        <div className="flex items-center gap-2.5">
+          {/* Hand icon */}
+          <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/>
+          </svg>
+          <span className="text-sm font-medium text-white">Sign Language</span>
+          <span className="text-xs text-purple-300 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded-full">
+            ISL
+          </span>
+        </div>
+
+        {/* Chevron */}
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+
+      {/* Collapsible camera panel */}
+      {open && (
+        <div id="gesture-camera-panel" className="px-4 pb-4">
+          <p className="text-xs text-gray-400 mb-3">
+            Position your hands in front of the camera and perform a sign.
+            The doctor will see your message instantly.
+          </p>
+          <VisionGestureCamera
+            sendGestureText={sendGestureText}
+            className="w-full"
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Patient kiosk page ────────────────────────────────────────────────────────────
 
 export default function PatientPage() {
   const params = useParams<{ sessionId: string }>()
@@ -34,6 +93,7 @@ export default function PatientPage() {
     clearClip,
     sendStatusChange,
     requestInterpreter,
+    sendGestureText,
   } = useSessionRealtime({
     sessionId,
   })
@@ -253,6 +313,9 @@ export default function PatientPage() {
 
           <PictogramGrid onTriggerAlert={handleTriggerAlert} />
         </div>
+
+        {/* Sign Language Camera Card (P3 — ISL gesture recognition) */}
+        <GestureCameraCard sendGestureText={sendGestureText} />
       </div>
 
       {/* ISL Video Player Modal (Triggered automatically when clip received) */}

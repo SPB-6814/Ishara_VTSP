@@ -13,13 +13,18 @@ import type {
   StatusChangePayload,
   SessionStatus,
   SessionEvent,
+  GestureTextPayload,
 } from '@/lib/types'
+
+// Re-export so consumers can import GestureTextPayload from this hook
+export type { GestureTextPayload }
 
 interface UseSessionRealtimeOptions {
   sessionId: string
   onAlertReceived?: (alert: PictogramAlertPayload) => void
   onClipReceived?: (clip: PlayClipPayload) => void
   onStatusReceived?: (status: StatusChangePayload) => void
+  onGestureReceived?: (payload: GestureTextPayload) => void
 }
 
 export function useSessionRealtime({
@@ -27,6 +32,7 @@ export function useSessionRealtime({
   onAlertReceived,
   onClipReceived,
   onStatusReceived,
+  onGestureReceived,
 }: UseSessionRealtimeOptions) {
   const [activeAlert, setActiveAlert] = useState<PictogramAlertPayload | null>(null)
   const [activeClip, setActiveClip] = useState<PlayClipPayload | null>(null)
@@ -90,9 +96,24 @@ export function useSessionRealtime({
           },
           ...prev,
         ])
+      } else if (type === REALTIME_EVENTS.GESTURE_TEXT) {
+        const gestureData = payload as GestureTextPayload
+        onGestureReceived?.(gestureData)
+
+        setEvents((prev) => [
+          {
+            id: `evt-${Date.now()}-${Math.random()}`,
+            session_id: sessionId,
+            event_type: 'gesture_text',
+            payload: gestureData as unknown as Record<string, unknown>,
+            actor_id: null,
+            created_at: gestureData.timestamp || new Date().toISOString(),
+          },
+          ...prev,
+        ])
       }
     },
-    [sessionId, onAlertReceived, onClipReceived, onStatusReceived]
+    [sessionId, onAlertReceived, onClipReceived, onStatusReceived, onGestureReceived]
   )
 
   useEffect(() => {
@@ -137,6 +158,9 @@ export function useSessionRealtime({
           })
           .on('broadcast', { event: REALTIME_EVENTS.STATUS_CHANGE }, (response: any) => {
             handleIncomingEvent(REALTIME_EVENTS.STATUS_CHANGE, response.payload)
+          })
+          .on('broadcast', { event: REALTIME_EVENTS.GESTURE_TEXT }, (response: any) => {
+            handleIncomingEvent(REALTIME_EVENTS.GESTURE_TEXT, response.payload)
           })
           .subscribe((status: string) => {
             setIsConnected(status === 'SUBSCRIBED')
@@ -375,6 +399,44 @@ export function useSessionRealtime({
     setActiveClip(null)
   }, [])
 
+  /** Broadcast a detected ISL gesture text to the dashboard */
+  const sendGestureText = useCallback(
+    (text: string, confidence: number) => {
+      const payload: GestureTextPayload = {
+        type: 'gesture_text',
+        sessionId,
+        text,
+        confidence,
+        timestamp: new Date().toISOString(),
+      }
+
+      // 1. Local BroadcastChannel (zero-latency same-device)
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          type: REALTIME_EVENTS.GESTURE_TEXT,
+          payload,
+        })
+      }
+
+      // 2. Supabase Realtime (cross-device)
+      if (supabaseChannelRef.current) {
+        supabaseChannelRef.current.send({
+          type: 'broadcast',
+          event: REALTIME_EVENTS.GESTURE_TEXT,
+          payload,
+        })
+      }
+
+      // 3. Persist to database audit trail
+      fetch(`/api/patient/${sessionId}/events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventType: 'gesture_text', payload }),
+      }).catch(() => {})
+    },
+    [sessionId]
+  )
+
   return {
     activeAlert,
     activeClip,
@@ -388,5 +450,6 @@ export function useSessionRealtime({
     clearAlert,
     clearClip,
     setEvents,
+    sendGestureText,
   }
 }

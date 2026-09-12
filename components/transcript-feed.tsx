@@ -2,6 +2,7 @@
 
 import React from 'react'
 import type { SessionEvent } from '@/lib/types'
+import type { GestureTextPayload } from '@/hooks/use-session-realtime'
 import {
   AlertCircle,
   Video,
@@ -13,6 +14,46 @@ import {
 interface TranscriptFeedProps {
   events: SessionEvent[]
 }
+
+// ─── Gesture text sub-component ──────────────────────────────────────────────
+
+function GestureTextEntry({ payload }: { payload: GestureTextPayload }) {
+  const confidencePct = Math.round(payload.confidence * 100)
+  const time = new Date(payload.timestamp).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+
+  const confColor =
+    confidencePct >= 80
+      ? 'text-green-400 bg-green-500/10 border-green-500/30'
+      : confidencePct >= 60
+      ? 'text-amber-400 bg-amber-500/10 border-amber-500/30'
+      : 'text-gray-400 bg-gray-500/10 border-gray-500/30'
+
+  return (
+    <div className="flex items-start gap-3 py-2 px-3 rounded-lg bg-purple-500/5 border border-purple-500/20">
+      <div className="flex-shrink-0 mt-0.5">
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-purple-500/15 text-purple-300 text-xs font-bold">
+          ISL
+        </span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-white font-medium leading-snug">{payload.text}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className={`text-xs px-1.5 py-0.5 rounded border font-mono ${confColor}`}>
+            {confidencePct}% confidence
+          </span>
+          <span className="text-xs text-gray-500">{time}</span>
+          <span className="text-xs text-purple-400 opacity-70">AI-detected sign</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function TranscriptFeed({ events }: TranscriptFeedProps) {
   if (events.length === 0) {
@@ -110,6 +151,14 @@ export function TranscriptFeed({ events }: TranscriptFeedProps) {
                 </div>
                 <span className="text-xs text-slate-500">{time}</span>
               </div>
+            )
+
+          case 'gesture_text':
+            return (
+              <GestureTextEntry
+                key={evt.id}
+                payload={evt.payload as unknown as GestureTextPayload}
+              />
             )
 
           default:

@@ -284,6 +284,7 @@ export function VisionGestureCamera({
 
         {/* Privacy Shutter: Dark frame when camera is OFF */}
         {!cameraOn && (
+<<<<<<< HEAD
           <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-4 text-center space-y-3 z-10">
             <div className="p-3.5 rounded-full bg-slate-900 border-2 border-slate-800 text-slate-400 shadow-inner">
               <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -311,6 +312,16 @@ export function VisionGestureCamera({
               </svg>
               <span>Turn On Sign Detection Camera</span>
             </button>
+=======
+          <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
+              <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.89L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+              </svg>
+            </div>
+            <p className="text-slate-400 text-sm font-medium">Camera is off</p>
+>>>>>>> 6cb634e8f0494d4bea3a47e25bb765f0630ea26f
           </div>
         )}
 

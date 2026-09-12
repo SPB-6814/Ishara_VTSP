@@ -14,10 +14,10 @@ import {
   Video,
   Shield,
   X,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-
 
 
 // ─── Patient kiosk page ────────────────────────────────────────────────────────────
@@ -30,6 +30,7 @@ export default function PatientPage() {
   const [lastAlertHindi, setLastAlertHindi] = useState<string | null>(null)
   const [showingConfirmation, setShowingConfirmation] = useState(false)
   const [bedName, setBedName] = useState('Bedside Kiosk (ISL)')
+  const [fallbackCountdown, setFallbackCountdown] = useState<number>(30)
 
   useEffect(() => {
     fetch(`/api/session?id=${sessionId}`)
@@ -54,6 +55,29 @@ export default function PatientPage() {
   } = useSessionRealtime({
     sessionId,
   })
+
+  // Auto-fallback countdown when live interpreter is paged (falls back to P3 AI Sign Interpreter if unreached)
+  useEffect(() => {
+    if (sessionStatus !== 'interpreter_requested') {
+      setFallbackCountdown(30)
+      return
+    }
+
+    const timer = setInterval(() => {
+      setFallbackCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          sendStatusChange('ai_fallback')
+          setCameraCardOpen(true)
+          toast.warning('Live interpreter unavailable within 30s. Switched to AI Assisted Sign Interpreter (P3).')
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [sessionStatus, sendStatusChange])
 
   const handleCancelInterpreter = () => {
     cancelInterpreterRequest()
@@ -89,6 +113,7 @@ export default function PatientPage() {
   }
 
   const handleRequestInterpreter = () => {
+    setFallbackCountdown(30)
     requestInterpreter({
       hospitalName: 'Apollo Multi-Specialty Hospital',
       patientName: bedName,
@@ -153,14 +178,14 @@ export default function PatientPage() {
                   Connecting to Remote ISL Interpreter...
                 </h3>
                 <p className="text-xs opacity-80 mt-0.5">
-                  Please stay in front of this screen. The video relay will launch automatically once accepted.
+                  Please stay in front of this screen. Video relay will launch automatically, or auto-fallback to AI Sign Assistant in {fallbackCountdown}s.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2.5 shrink-0">
               <div className="hidden sm:inline-flex items-center gap-2 px-3.5 h-10 rounded-xl bg-amber-100/90 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs font-extrabold shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                <span>Connecting...</span>
+                <span>Connecting ({fallbackCountdown}s)...</span>
               </div>
               <Button
                 variant="outline"
@@ -169,6 +194,46 @@ export default function PatientPage() {
               >
                 <X className="w-4 h-4" />
                 <span>Cancel / रद्द करें</span>
+              </Button>
+            </div>
+          </div>
+        ) : sessionStatus === 'ai_fallback' ? (
+          <div className="w-full p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border-2 border-purple-400 dark:border-purple-600 text-purple-950 dark:text-purple-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-purple-200 dark:bg-purple-900/60 rounded-full shrink-0">
+                <Sparkles className="w-6 h-6 text-purple-800 dark:text-purple-200" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs uppercase font-extrabold tracking-wider text-purple-800 dark:text-purple-300 block">
+                    AI Assisted Sign Interpreter Active (P3 Fallback)
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-200 dark:bg-purple-800 text-purple-900 dark:text-purple-100">
+                    Auto-Switched
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-black">
+                  Live Interpreter Busy • सांकेतिक भाषा एआई कैमरा सक्रिय है
+                </h3>
+                <p className="text-xs opacity-85 mt-0.5">
+                  Sign in front of the camera below for automatic translation, or retry paging a human interpreter.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                onClick={handleRequestInterpreter}
+                className="flex-1 sm:flex-initial h-10 px-3.5 rounded-xl font-bold text-xs bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-950 shadow-xs"
+              >
+                🔄 Retry Live Interpreter
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => sendStatusChange('active')}
+                className="h-10 px-3 rounded-xl font-bold text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              >
+                Dismiss
               </Button>
             </div>
           </div>
@@ -299,9 +364,6 @@ export default function PatientPage() {
               <Shield className="w-4 h-4 text-[#084C5B]" />
               Tap to Request Immediate Care / अपनी तकलीफ़ बताएं
             </h2>
-            <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-              Zero-latency broadcast to nurse station
-            </span>
           </div>
 
           <PictogramGrid onTriggerAlert={handleTriggerAlert} />

@@ -270,18 +270,18 @@ export default function DashboardPage() {
   // Fetch session details and previous events if available
   useEffect(() => {
     fetch(`/api/session?id=${sessionId}`)
-      .then((res) => res.json())
+      .then((res) => (res.ok && res.headers.get('content-type')?.includes('application/json') ? res.json() : null))
       .then((data) => {
-        if (data.session?.patient_display_name) {
+        if (data?.session?.patient_display_name) {
           setPatientDisplayName(data.session.patient_display_name)
         }
       })
       .catch(() => {})
 
     fetch(`/api/session/${sessionId}/events`)
-      .then((res) => res.json())
+      .then((res) => (res.ok && res.headers.get('content-type')?.includes('application/json') ? res.json() : null))
       .then((data) => {
-        if (data.events && Array.isArray(data.events) && data.events.length > 0) {
+        if (data?.events && Array.isArray(data.events) && data.events.length > 0) {
           setEvents((prev) => {
             const existingIds = new Set(prev.map((e) => e.id))
             const newEvents = data.events.filter((e: any) => !existingIds.has(e.id))

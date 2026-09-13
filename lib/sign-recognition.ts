@@ -199,14 +199,24 @@ export async function initRecognizers(): Promise<void> {
     }
 
     // Load custom Random Forest model
-    const res = await fetch('/models/model.json')
-    if (res.ok) {
-      _model = (await res.json()) as RFModel
-      console.log(
-        `[ISL] Custom model loaded: ${_model.n_estimators} trees, ${_model.n_features} features, ${_model.labels.length} signs`
-      )
-    } else {
-      console.warn('[ISL] model.json not found — falling back to heuristics only')
+    try {
+      const res = await fetch('/models/model.json')
+      const contentType = res.headers.get('content-type') || ''
+      if (res.ok && (contentType.includes('application/json') || !contentType.includes('text/html'))) {
+        const text = await res.text()
+        if (text.trim().startsWith('{')) {
+          _model = JSON.parse(text) as RFModel
+          console.log(
+            `[ISL] Custom model loaded: ${_model.n_estimators} trees, ${_model.n_features} features, ${_model.labels.length} signs`
+          )
+        } else {
+          console.warn('[ISL] model.json returned non-JSON content — falling back to heuristics')
+        }
+      } else {
+        console.warn('[ISL] model.json not found — falling back to heuristics only')
+      }
+    } catch (modelErr) {
+      console.warn('[ISL] Could not parse model.json:', modelErr)
     }
   } catch (err) {
     console.error('[ISL] Init error:', err)

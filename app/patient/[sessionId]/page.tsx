@@ -34,9 +34,9 @@ export default function PatientPage() {
 
   useEffect(() => {
     fetch(`/api/session?id=${sessionId}`)
-      .then((res) => res.json())
+      .then((res) => (res.ok && res.headers.get('content-type')?.includes('application/json') ? res.json() : null))
       .then((data) => {
-        if (data.session?.patient_display_name) {
+        if (data?.session?.patient_display_name) {
           setBedName(data.session.patient_display_name)
         }
       })

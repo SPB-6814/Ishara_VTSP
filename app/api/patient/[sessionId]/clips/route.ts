@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getClipByKey } from '@/lib/isl-clips'
+import { getClipByKey, getClipUrl } from '@/lib/isl-clips'
 
 export async function POST(
   request: Request,
@@ -15,10 +15,13 @@ export async function POST(
       return NextResponse.json({ error: 'Clip not found' }, { status: 404 })
     }
 
+    const clipUrl = getClipUrl(clip.storage_path || clip.key)
+
     return NextResponse.json({
       success: true,
       sessionId,
       clip,
+      clipUrl,
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

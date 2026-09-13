@@ -8,7 +8,7 @@ import { EmergencyAlertBanner } from '@/components/emergency-alert-banner'
 import { TranscriptFeed, isSevereOrCriticalEvent } from '@/components/transcript-feed'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition'
-import { searchClips } from '@/lib/isl-clips'
+import { searchClips, getClipByKey, getClipUrl } from '@/lib/isl-clips'
 import {
   ArrowLeft,
   Video,
@@ -301,22 +301,58 @@ export default function DashboardPage() {
     }
   }
 
-  const handleSendISLPhrase = async (phrase?: string) => {
+  const handleSendISLPhrase = async (phrase?: string, clipKey?: string) => {
     const query = phrase || inputText.trim()
-    if (!query) return
+    if (!query && !clipKey) return
 
     setIsSearching(true)
     try {
-      const matches = searchClips(query, 1)
+      let bestClip: any = null
+      let clipUrl: string = ''
 
-      if (matches.length > 0 && matches[0]) {
-        const best = matches[0]
-        sendPlayClip(best.clip.key, best.signedUrl, best.clip.label)
-        toast.success(`Broadcasting ISL clip "${best.clip.label}" to patient tablet`)
+      // 1. Try API lookup first for server-signed Supabase URL
+      try {
+        const res = await fetch('/api/isl-lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(clipKey ? { key: clipKey } : { query }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data?.match?.clip) {
+            bestClip = data.match.clip
+            clipUrl = data.match.signedUrl || getClipUrl(bestClip.storage_path)
+          }
+        }
+      } catch (err) {
+        console.warn('API lookup error, falling back to client index', err)
+      }
+
+      // 2. Fallback to client-side search if API did not return a match
+      if (!bestClip) {
+        if (clipKey) {
+          const matched = getClipByKey(clipKey)
+          if (matched) {
+            bestClip = matched
+            clipUrl = getClipUrl(matched.storage_path)
+          }
+        }
+        if (!bestClip && query) {
+          const matches = searchClips(query, 1)
+          if (matches.length > 0 && matches[0]) {
+            bestClip = matches[0].clip
+            clipUrl = matches[0].signedUrl || getClipUrl(bestClip.storage_path)
+          }
+        }
+      }
+
+      if (bestClip && clipUrl) {
+        sendPlayClip(bestClip.key, clipUrl, bestClip.label)
+        toast.success(`Broadcasting ISL clip "${bestClip.label}" to patient tablet`)
         setInputText('')
         resetTranscript()
       } else {
-        toast.error(`No matching ISL clip found for "${query}". Try rephrasing or requesting an interpreter.`)
+        toast.error(`No matching ISL clip found for "${query || clipKey}". Try rephrasing or requesting an interpreter.`)
       }
     } catch {
       toast.error('Failed to lookup ISL sign')
@@ -686,7 +722,7 @@ export default function DashboardPage() {
                       <button
                         key={chip.key}
                         type="button"
-                        onClick={() => handleSendISLPhrase(chip.label)}
+                        onClick={() => handleSendISLPhrase(chip.label, chip.key)}
                         className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-teal-50 hover:text-[#084C5B] dark:hover:bg-teal-950/60 dark:hover:text-teal-200 border border-slate-200 dark:border-slate-700 transition-colors"
                       >
                         + {chip.label}

@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import { X, RotateCcw, Video } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EMERGENCY_P0_PICTOGRAMS, ALL_CATEGORY_PICTOGRAMS } from '@/lib/pictograms'
+import { getClipUrl } from '@/lib/isl-clips'
 
 interface ISLVideoPlayerProps {
   clipKey: string
@@ -23,7 +24,18 @@ export function ISLVideoPlayer({
   autoCloseSeconds = 30,
 }: ISLVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const directPublicUrl = getClipUrl(clipKey)
+  const initialUrl = videoUrl && videoUrl.startsWith('http') ? videoUrl : directPublicUrl
+
+  const [currentSrc, setCurrentSrc] = useState<string>(initialUrl)
   const [hasError, setHasError] = useState(false)
+
+  // Reset states whenever clip changes
+  useEffect(() => {
+    const nextUrl = videoUrl && videoUrl.startsWith('http') ? videoUrl : getClipUrl(clipKey)
+    setCurrentSrc(nextUrl)
+    setHasError(false)
+  }, [videoUrl, clipKey])
 
   const resolvedHindi =
     hindiLabel ||
@@ -44,7 +56,16 @@ export function ISLVideoPlayer({
   const handleReplay = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = 0
-      videoRef.current.play()
+      videoRef.current.play().catch(() => {})
+    }
+  }
+
+  const handleVideoError = () => {
+    // If the failed URL wasn't the direct Supabase public URL, retry with direct public URL
+    if (currentSrc !== directPublicUrl) {
+      setCurrentSrc(directPublicUrl)
+    } else {
+      setHasError(true)
     }
   }
 
@@ -77,14 +98,15 @@ export function ISLVideoPlayer({
 
         {/* Video Area */}
         <div className="relative aspect-video w-full bg-slate-950 flex items-center justify-center overflow-hidden">
-          {videoUrl && !hasError ? (
+          {currentSrc && !hasError ? (
             <video
               ref={videoRef}
-              src={videoUrl}
+              key={currentSrc}
+              src={currentSrc}
               autoPlay
               playsInline
               className="w-full h-full object-contain"
-              onError={() => setHasError(true)}
+              onError={handleVideoError}
             />
           ) : (
             /* Visual Fallback Card if video asset isn't in Storage yet */

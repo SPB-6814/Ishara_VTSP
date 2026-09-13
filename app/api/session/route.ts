@@ -1,9 +1,100 @@
 import { NextResponse } from 'next/server'
+import { RoomServiceClient } from 'livekit-server-sdk'
 import { createServiceClient } from '@/lib/supabase/service'
 import { toValidSessionUuid, UUID_REGEX } from '@/lib/realtime'
 
 // In-memory fallback session store if DB unreachable
 const inMemorySessions = new Map<string, any>()
+
+/**
+ * Verify actual live statuses against real-time infrastructure:
+ * 1. An active LiveKit room with participants MUST exist for 'interpreter_connected'.
+ * 2. An active interpreter page MUST have occurred within the last 45s for 'interpreter_requested'.
+ * If stale/disconnected, auto-heals session status back to 'active' (active triage).
+ */
+async function verifyAndCorrectSessions(sessions: any[], supabase: any): Promise<any[]> {
+  if (!sessions || sessions.length === 0) return sessions
+
+  // 1. Query active rooms with participants from LiveKit
+  let activeLiveKitRooms = new Set<string>()
+  if (process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET) {
+    try {
+      const livekitUrl = (process.env.NEXT_PUBLIC_LIVEKIT_URL || 'wss://demo.livekit.cloud').replace('wss://', 'https://')
+      const svc = new RoomServiceClient(livekitUrl, process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET)
+      const rooms = await svc.listRooms()
+      for (const r of rooms) {
+        if (r.numParticipants && r.numParticipants > 0) {
+          activeLiveKitRooms.add(r.name)
+        }
+      }
+    } catch (err) {
+      console.warn('LiveKit room verification notice:', err)
+    }
+  }
+
+  // 2. Query recent interpreter_requested events for sessions marked as 'interpreter_requested'
+  const requestedSessionIds = sessions
+    .filter((s) => s.status === 'interpreter_requested')
+    .map((s) => s.id)
+
+  let recentValidPages = new Set<string>()
+  if (requestedSessionIds.length > 0 && supabase) {
+    try {
+      const cutoffTime = new Date(Date.now() - 45_000).toISOString()
+      const { data: recentEvents } = await supabase
+        .from('session_events')
+        .select('session_id, created_at')
+        .in('session_id', requestedSessionIds)
+        .eq('event_type', 'interpreter_requested')
+        .gte('created_at', cutoffTime)
+
+      if (recentEvents) {
+        for (const ev of recentEvents) {
+          recentValidPages.add(ev.session_id)
+        }
+      }
+    } catch (err) {
+      console.warn('Interpreter request verification notice:', err)
+    }
+  }
+
+  // 3. Verify each session and auto-correct stale status
+  for (const sess of sessions) {
+    // If marked interpreter_connected, verify whether a LiveKit room with participants actually exists
+    if (sess.status === 'interpreter_connected') {
+      if (!activeLiveKitRooms.has(sess.id)) {
+        sess.status = 'active'
+        sess.active_mode = 'pictogram'
+        if (supabase) {
+          supabase
+            .from('sessions')
+            .update({ status: 'active', active_mode: 'pictogram' })
+            .eq('id', sess.id)
+            .then(() => {})
+            .catch(() => {})
+        }
+      }
+    }
+
+    // If marked interpreter_requested, verify if it was paged within the 45-second window
+    if (sess.status === 'interpreter_requested') {
+      if (!recentValidPages.has(sess.id)) {
+        sess.status = 'active'
+        sess.active_mode = 'pictogram'
+        if (supabase) {
+          supabase
+            .from('sessions')
+            .update({ status: 'active', active_mode: 'pictogram' })
+            .eq('id', sess.id)
+            .then(() => {})
+            .catch(() => {})
+        }
+      }
+    }
+  }
+
+  return sessions
+}
 
 export async function POST(request: Request) {
   try {
@@ -100,7 +191,9 @@ export async function GET(request: Request) {
             seen.add(norm)
             return true
           })
-          return NextResponse.json({ sessions: unique })
+
+          const verifiedList = await verifyAndCorrectSessions(unique, supabase)
+          return NextResponse.json({ sessions: verifiedList })
         }
       } catch (err) {
         console.warn('Failed to query sessions list from Supabase:', err)
@@ -142,7 +235,8 @@ export async function GET(request: Request) {
           .maybeSingle()
 
         if (matched) {
-          return NextResponse.json({ session: matched })
+          const [verified] = await verifyAndCorrectSessions([matched], supabase)
+          return NextResponse.json({ session: verified || matched })
         }
 
         // If not found in DB, auto-create a new active session for this bed so the bedside tablet works immediately
@@ -201,7 +295,10 @@ export async function GET(request: Request) {
     if (supabase) {
       try {
         const { data } = await supabase.from('sessions').select('*').eq('id', rawId).single()
-        if (data) return NextResponse.json({ session: data })
+        if (data) {
+          const [verified] = await verifyAndCorrectSessions([data], supabase)
+          return NextResponse.json({ session: verified || data })
+        }
       } catch {}
     }
   }
@@ -211,7 +308,10 @@ export async function GET(request: Request) {
   if (supabase) {
     try {
       const { data } = await supabase.from('sessions').select('*').eq('id', defaultId).single()
-      if (data) return NextResponse.json({ session: data })
+      if (data) {
+        const [verified] = await verifyAndCorrectSessions([data], supabase)
+        return NextResponse.json({ session: verified || data })
+      }
     } catch {}
   }
 

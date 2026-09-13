@@ -26,6 +26,7 @@ import { EmergencyAlertBanner } from '@/components/emergency-alert-banner'
 import {
   HOSPITAL_ALERTS_CHANNEL,
   GLOBAL_HOSPITAL_ALERTS_BC,
+  INTERPRETER_REQUESTS_CHANNEL,
   REALTIME_EVENTS,
 } from '@/lib/realtime'
 import type { PictogramAlertPayload } from '@/lib/types'
@@ -63,6 +64,7 @@ export default function HospitalRosterPage() {
   useEffect(() => {
     // 1. Local BroadcastChannel for instant local / multi-tab alert detection
     let localBC: BroadcastChannel | null = null
+    let interpBC: BroadcastChannel | null = null
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
         localBC = new BroadcastChannel(GLOBAL_HOSPITAL_ALERTS_BC)
@@ -73,17 +75,32 @@ export default function HospitalRosterPage() {
             toast.error(`🚨 EMERGENCY ALERT: ${payload.patientName || 'Bedside'} — ${payload.label}`)
           }
         }
+
+        interpBC = new BroadcastChannel('ishara_global_interpreter_requests')
+        interpBC.onmessage = (event) => {
+          const { type, payload } = event.data || {}
+          if (type === 'new_request' && payload?.sessionId) {
+            setSessions((prev) =>
+              prev.map((s) => (s.id === payload.sessionId ? { ...s, status: 'interpreter_requested' } : s))
+            )
+          } else if (type === 'cancel_request' && payload?.sessionId) {
+            setSessions((prev) =>
+              prev.map((s) => (s.id === payload.sessionId ? { ...s, status: 'active' } : s))
+            )
+          }
+        }
       }
     } catch {}
 
     // 2. Supabase Realtime channel for remote devices
     let supabase: any = null
-    let channel: any = null
+    let alertChannel: any = null
+    let interpChannel: any = null
     try {
       if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
         supabase = createClient()
-        channel = supabase.channel(HOSPITAL_ALERTS_CHANNEL)
-        channel
+        alertChannel = supabase.channel(HOSPITAL_ALERTS_CHANNEL)
+        alertChannel
           .on(
             'broadcast',
             { event: REALTIME_EVENTS.EMERGENCY_ALERT },
@@ -95,18 +112,36 @@ export default function HospitalRosterPage() {
             }
           )
           .subscribe()
+
+        interpChannel = supabase.channel(INTERPRETER_REQUESTS_CHANNEL)
+        interpChannel
+          .on('broadcast', { event: REALTIME_EVENTS.NEW_REQUEST }, ({ payload }: any) => {
+            if (payload?.sessionId) {
+              setSessions((prev) =>
+                prev.map((s) => (s.id === payload.sessionId ? { ...s, status: 'interpreter_requested' } : s))
+              )
+            }
+          })
+          .on('broadcast', { event: REALTIME_EVENTS.CANCEL_REQUEST }, ({ payload }: any) => {
+            if (payload?.sessionId) {
+              setSessions((prev) =>
+                prev.map((s) => (s.id === payload.sessionId ? { ...s, status: 'active' } : s))
+              )
+            }
+          })
+          .subscribe()
       }
     } catch {}
 
     return () => {
       if (localBC) localBC.close()
-      if (channel && supabase) {
-        supabase.removeChannel(channel)
-      }
+      if (interpBC) interpBC.close()
+      if (alertChannel && supabase) supabase.removeChannel(alertChannel)
+      if (interpChannel && supabase) supabase.removeChannel(interpChannel)
     }
   }, [])
 
-  // Fetch current user and active sessions
+  // Fetch current user and active verified sessions
   const fetchRoster = React.useCallback(async () => {
     try {
       const supabase = createClient()
@@ -118,12 +153,27 @@ export default function HospitalRosterPage() {
       }
       setUser(authUser)
 
-      // Query sessions
-      const { data: sessData } = await supabase
-        .from('sessions')
-        .select('*')
-        .neq('status', 'closed')
-        .order('created_at', { ascending: false })
+      // Query verified sessions via server endpoint (which verifies live LiveKit rooms and paging timeouts)
+      let sessData: BedSession[] = []
+      try {
+        const res = await fetch('/api/session?list=true', { cache: 'no-store' })
+        if (res.ok) {
+          const json = await res.json()
+          if (json?.sessions && Array.isArray(json.sessions)) {
+            sessData = json.sessions
+          }
+        }
+      } catch {}
+
+      // Fallback to direct supabase query if API failed
+      if (sessData.length === 0) {
+        const { data: directData } = await supabase
+          .from('sessions')
+          .select('*')
+          .neq('status', 'closed')
+          .order('created_at', { ascending: false })
+        if (directData) sessData = directData
+      }
 
       if (sessData && sessData.length > 0) {
         // Deduplicate sessions so each unique bed/patient appears at most once
@@ -132,7 +182,7 @@ export default function HospitalRosterPage() {
         const uniqueSessions: BedSession[] = []
 
         for (const s of sessData) {
-          const normName = s.patient_display_name.trim().toLowerCase()
+          const normName = (s.patient_display_name || '').trim().toLowerCase()
           if (!seenIds.has(s.id) && !seenNames.has(normName)) {
             seenIds.add(s.id)
             seenNames.add(normName)
@@ -171,6 +221,13 @@ export default function HospitalRosterPage() {
 
   useEffect(() => {
     fetchRoster()
+
+    // Continuously verify and poll bed triage statuses every 10 seconds
+    const pollInterval = setInterval(() => {
+      fetchRoster()
+    }, 10000)
+
+    return () => clearInterval(pollInterval)
   }, [fetchRoster])
 
   const handleSignOut = async () => {

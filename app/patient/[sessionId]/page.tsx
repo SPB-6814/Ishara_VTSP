@@ -14,11 +14,65 @@ import {
   Video,
   Shield,
   X,
-  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
+// ─── Collapsible sign-language camera card ──────────────────────────────────────────
+
+function GestureCameraCard({
+  sendGestureText,
+}: {
+  sendGestureText: (text: string, confidence: number) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="rounded-xl border border-white/10 bg-gray-900/50 overflow-hidden">
+      {/* Header / toggle */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors"
+        aria-expanded={open}
+        aria-controls="gesture-camera-panel"
+      >
+        <div className="flex items-center gap-2.5">
+          {/* Hand icon */}
+          <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
+          </svg>
+          <span className="text-sm font-medium text-white">Sign Language</span>
+          <span className="text-xs text-purple-300 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded-full">
+            ISL
+          </span>
+        </div>
+
+        {/* Chevron */}
+        <svg
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {/* Collapsible camera panel */}
+      {open && (
+        <div id="gesture-camera-panel" className="px-4 pb-4">
+          <p className="text-xs text-gray-400 mb-3">
+            Position your hands in front of the camera and perform a sign.
+            The doctor will see your message instantly.
+          </p>
+          <VisionGestureCamera
+            sendGestureText={sendGestureText}
+            className="w-full"
+          />
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Patient kiosk page ────────────────────────────────────────────────────────────
 
@@ -30,7 +84,6 @@ export default function PatientPage() {
   const [lastAlertHindi, setLastAlertHindi] = useState<string | null>(null)
   const [showingConfirmation, setShowingConfirmation] = useState(false)
   const [bedName, setBedName] = useState('Bedside Kiosk (ISL)')
-  const [fallbackCountdown, setFallbackCountdown] = useState<number>(30)
 
   useEffect(() => {
     fetch(`/api/session?id=${sessionId}`)
@@ -40,7 +93,7 @@ export default function PatientPage() {
           setBedName(data.session.patient_display_name)
         }
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [sessionId])
 
   const {
@@ -56,63 +109,24 @@ export default function PatientPage() {
     sessionId,
   })
 
-  // Auto-fallback countdown when live interpreter is paged (falls back to P3 AI Sign Interpreter if unreached)
-  useEffect(() => {
-    if (sessionStatus !== 'interpreter_requested') {
-      setFallbackCountdown(30)
-      return
-    }
-
-    const timer = setInterval(() => {
-      setFallbackCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          sendStatusChange('ai_fallback')
-          toast.warning('Live interpreter unavailable within 30s. Switched to AI Assisted Sign Interpreter (P3).')
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [sessionStatus, sendStatusChange])
-
   const handleCancelInterpreter = () => {
     cancelInterpreterRequest()
     toast.info('Interpreter request cancelled / अनुरोध रद्द किया गया')
   }
 
   const handleTriggerAlert = (pictogram: DetailedPictogram, extraNote?: string) => {
-    const isUrgent = pictogram.priority === 'P0'
-    const fullNote = extraNote ? `${pictogram.label} (${extraNote})` : pictogram.label
-
-    // 1. Send alert via Realtime broadcast (only P0 urgent informs doctor via emergency banner)
-    sendPictogramAlert(
-      pictogram.key,
-      pictogram.label,
-      pictogram.category,
-      pictogram.priority,
-      isUrgent,
-      bedName
-    )
+    // 1. Send instant alert via Realtime broadcast
+    sendPictogramAlert(pictogram.key, pictogram.label, pictogram.category)
 
     // 2. Show clear confirmation banner for Deaf patient
-    setLastAlertText(fullNote)
-    setLastAlertHindi(
-      pictogram.hindiText || (isUrgent ? 'डॉक्टर को तुरंत सूचित कर दिया गया है' : 'नर्सिंग स्टेशन को सूचित किया गया')
-    )
+    setLastAlertText(extraNote ? `${pictogram.label} (${extraNote})` : pictogram.label)
+    setLastAlertHindi(pictogram.hindiText || 'डॉक्टर को सूचित कर दिया गया है')
     setShowingConfirmation(true)
 
-    if (isUrgent) {
-      toast.error(`Urgent Alert Sent: ${fullNote} • डॉक्टर को तुरंत सूचित किया गया`)
-    } else {
-      toast.success(`Request Sent: ${fullNote} • सूचित किया गया`)
-    }
+    toast.success(`Alert Sent: ${pictogram.label} ${extraNote ? `(${extraNote})` : ''} • डॉक्टर को सूचित किया गया`)
   }
 
   const handleRequestInterpreter = () => {
-    setFallbackCountdown(30)
     requestInterpreter({
       hospitalName: 'Apollo Multi-Specialty Hospital',
       patientName: bedName,
@@ -177,62 +191,21 @@ export default function PatientPage() {
                   Connecting to Remote ISL Interpreter...
                 </h3>
                 <p className="text-xs opacity-80 mt-0.5">
-                  Please stay in front of this screen. Video relay will launch automatically, or auto-fallback to AI Sign Assistant in {fallbackCountdown}s.
+                  Please stay in front of this screen. The video relay will launch automatically once accepted.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 shrink-0">
-              <div className="hidden sm:inline-flex items-center gap-2 px-3.5 h-10 rounded-xl bg-amber-100/90 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs font-extrabold shadow-xs">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                <span>Connecting ({fallbackCountdown}s)...</span>
-              </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
+                Connecting...
+              </span>
               <Button
                 variant="outline"
                 onClick={handleCancelInterpreter}
-                className="h-10 px-4 rounded-xl font-bold text-xs sm:text-sm bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-700/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:border-red-400 dark:hover:border-red-500/80 transition-all flex items-center gap-1.5 shadow-xs"
+                className="bg-white/90 dark:bg-slate-900 border-amber-600 dark:border-amber-400 text-amber-950 dark:text-amber-100 hover:bg-amber-100 dark:hover:bg-slate-800 font-extrabold text-xs sm:text-sm h-10 px-4 rounded-xl flex items-center gap-1.5 shadow-sm"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 text-red-600" />
                 <span>Cancel / रद्द करें</span>
-              </Button>
-            </div>
-          </div>
-        ) : sessionStatus === 'ai_fallback' ? (
-          <div className="w-full p-4 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border-2 border-purple-400 dark:border-purple-600 text-purple-950 dark:text-purple-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md animate-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-purple-200 dark:bg-purple-900/60 rounded-full shrink-0">
-                <Sparkles className="w-6 h-6 text-purple-800 dark:text-purple-200" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase font-extrabold tracking-wider text-purple-800 dark:text-purple-300 block">
-                    AI Assisted Sign Interpreter Active (P3 Fallback)
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-200 dark:bg-purple-800 text-purple-900 dark:text-purple-100">
-                    Auto-Switched
-                  </span>
-                </div>
-                <h3 className="text-sm sm:text-base font-black">
-                  Live Interpreter Busy • सांकेतिक भाषा एआई कैमरा सक्रिय है
-                </h3>
-                <p className="text-xs opacity-85 mt-0.5">
-                  Sign in front of the camera below for automatic translation, or retry paging a human interpreter.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                onClick={handleRequestInterpreter}
-                className="flex-1 sm:flex-initial h-10 px-3.5 rounded-xl font-bold text-xs bg-white dark:bg-slate-900 border border-purple-300 dark:border-purple-700 text-purple-800 dark:text-purple-200 hover:bg-purple-100 dark:hover:bg-purple-950 shadow-xs"
-              >
-                🔄 Retry Live Interpreter
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => sendStatusChange('active')}
-                className="h-10 px-3 rounded-xl font-bold text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              >
-                Dismiss
               </Button>
             </div>
           </div>
@@ -288,7 +261,7 @@ export default function PatientPage() {
               variant="outline"
               size="sm"
               onClick={() => setShowingConfirmation(false)}
-              className="border-white/40 bg-white/10 hover:bg-white/20 text-white hover:text-white shrink-0 font-bold"
+              className="border-white/40 bg-white/10 hover:bg-white text-white hover:text-emerald-800 shrink-0 font-bold"
             >
               Dismiss
             </Button>
@@ -326,36 +299,6 @@ export default function PatientPage() {
           </div>
         )}
 
-        {/* P3 — Core Feature: AI Sign Language Recognition Camera Subscreen */}
-        <section
-          aria-label="Indian Sign Language gesture recognition"
-          className="w-full max-w-2xl mx-auto rounded-3xl bg-white dark:bg-slate-900 border-2 border-teal-600/30 dark:border-teal-500/30 p-4 sm:p-5 shadow-xl transition-all"
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-950/70 border border-teal-200 dark:border-teal-800 text-[#084C5B] dark:text-teal-300">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                    d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>ISL AI Sign Recognition</span>
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-900 dark:bg-teal-900/60 dark:text-teal-300 border border-teal-300 dark:border-teal-700">
-                    AI सांकेतिक भाषा
-                  </span>
-                </h2>
-              </div>
-            </div>
-          </div>
-
-          <VisionGestureCamera
-            sendGestureText={sendGestureText}
-            className="w-full"
-          />
-        </section>
-
         {/* Pictogram Grid (P0) */}
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-2">
@@ -363,10 +306,16 @@ export default function PatientPage() {
               <Shield className="w-4 h-4 text-[#084C5B]" />
               Tap to Request Immediate Care / अपनी तकलीफ़ बताएं
             </h2>
+            <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+              Zero-latency broadcast to nurse station
+            </span>
           </div>
 
           <PictogramGrid onTriggerAlert={handleTriggerAlert} />
         </div>
+
+        {/* Sign Language Camera Card (P3 — ISL gesture recognition) */}
+        <GestureCameraCard sendGestureText={sendGestureText} />
       </div>
 
       {/* ISL Video Player Modal (Triggered automatically when clip received) */}

@@ -49,33 +49,33 @@ export function VisionGestureCamera({
   onCameraStateChange,
   className = '',
 }: VisionGestureCameraProps) {
-  const videoRef   = useRef<HTMLVideoElement>(null)
-  const canvasRef  = useRef<HTMLCanvasElement>(null)
-  const rafRef     = useRef<number>(0)
-  const streamRef  = useRef<MediaStream | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const rafRef = useRef<number>(0)
+  const streamRef = useRef<MediaStream | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastSentRef = useRef<string>('')
 
-  const [cameraOn,        setCameraOn]        = useState(false)
-  const [modelReady,      setModelReady]      = useState(false)
-  const [faceDetected,    setFaceDetected]    = useState(false)
-  const [pendingConf,     setPendingConf]     = useState(0)
-  const [lastGesture,     setLastGesture]     = useState<DetectedGesture | null>(null)
-  const [wordBuffer,      setWordBuffer]      = useState<string[]>([])
-  const [flashLabel,      setFlashLabel]      = useState('')
-  const [initError,       setInitError]       = useState('')
+  const [cameraOn, setCameraOn] = useState(false)
+  const [modelReady, setModelReady] = useState(false)
+  const [faceDetected, setFaceDetected] = useState(false)
+  const [pendingConf, setPendingConf] = useState(0)
+  const [lastGesture, setLastGesture] = useState<DetectedGesture | null>(null)
+  const [wordBuffer, setWordBuffer] = useState<string[]>([])
+  const [flashLabel, setFlashLabel] = useState('')
+  const [initError, setInitError] = useState('')
 
   // ─── Skeleton drawing ───────────────────────────────────────────────────────
 
   const drawSkeleton = useCallback(
     (landmarks: { x: number; y: number }[] | null) => {
       const canvas = canvasRef.current
-      const video  = videoRef.current
+      const video = videoRef.current
       if (!canvas || !video) return
       const ctx = canvas.getContext('2d')
       if (!ctx) return
 
-      canvas.width  = video.videoWidth  || canvas.offsetWidth
+      canvas.width = video.videoWidth || canvas.offsetWidth
       canvas.height = video.videoHeight || canvas.offsetHeight
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
@@ -86,7 +86,7 @@ export function VisionGestureCamera({
 
       // Connection lines
       ctx.strokeStyle = 'rgba(255,255,255,0.55)'
-      ctx.lineWidth   = 1.5
+      ctx.lineWidth = 1.5
       for (const [a, b] of HAND_CONNECTIONS) {
         ctx.beginPath()
         ctx.moveTo(landmarks[a].x * W, landmarks[a].y * H)
@@ -210,8 +210,8 @@ export function VisionGestureCamera({
 
   // ─── Confidence ring SVG ────────────────────────────────────────────────────
 
-  const ringR  = 14
-  const ringC  = 2 * Math.PI * ringR
+  const ringR = 14
+  const ringC = 2 * Math.PI * ringR
   const ringOffset = ringC * (1 - pendingConf)
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -224,31 +224,14 @@ export function VisionGestureCamera({
         <div className="absolute top-0 left-0 right-0 z-20 px-3 py-2 bg-gradient-to-b from-black/90 via-black/50 to-transparent flex items-center justify-between text-white text-xs">
           <div className="flex items-center gap-2">
             <div
-              className={`w-2.5 h-2.5 rounded-full ${
-                cameraOn ? 'bg-emerald-400 animate-ping' : 'bg-rose-500'
-              }`}
+              className={`w-2.5 h-2.5 rounded-full ${cameraOn ? 'bg-emerald-400 animate-ping' : 'bg-rose-500'
+                }`}
             />
             <span className="font-extrabold text-[12px] tracking-wide text-white flex items-center gap-1.5">
               <span>Vision Sign AI Live</span>
-              <span className="text-[10px] uppercase px-1.5 py-0.5 font-mono bg-teal-900/60 border border-teal-500/40 text-teal-300 rounded">
+              <span className="text-[10px] uppercase px-1.5 py-0.2 font-mono bg-teal-900/60 border border-teal-500/40 text-teal-300 rounded">
                 24 ISL Signs
               </span>
-              {cameraOn && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-normal flex items-center gap-1 border ${
-                    faceDetected
-                      ? 'bg-blue-950/70 border-blue-400/40 text-blue-300'
-                      : 'bg-black/40 border-white/10 text-gray-400'
-                  }`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      faceDetected ? 'bg-blue-400 animate-pulse' : 'bg-gray-500'
-                    }`}
-                  />
-                  {faceDetected ? 'ISL + Face' : 'ISL Hand'}
-                </span>
-              )}
             </span>
             {!modelReady && !initError && (
               <span className="text-[10px] text-amber-300 bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded-full animate-pulse">
@@ -335,6 +318,27 @@ export function VisionGestureCamera({
           </div>
         )}
 
+        {/* Top-left: face + hand tracking indicator when camera is active */}
+        {cameraOn && (
+          <div className="absolute top-3 left-3 flex items-center gap-1.5 z-10">
+            <span
+              className={`text-xs px-2.5 py-1 rounded-full backdrop-blur-md transition-all flex items-center gap-1.5 border ${faceDetected
+                ? 'bg-blue-950/70 border-blue-400/40 text-blue-300 shadow-sm shadow-blue-500/20'
+                : 'bg-black/60 border-white/10 text-gray-400'
+                }`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${faceDetected ? 'bg-blue-400 animate-pulse' : 'bg-gray-500'
+                  }`}
+              />
+              <span className="font-medium">
+                {faceDetected ? 'ISL + Face' : 'ISL Hand'}
+              </span>
+            </span>
+          </div>
+        )}
+
+        {/* Top-right: confidence ring + label */}
         {/* Live HUD Pill (active gesture + confidence ring) */}
         {cameraOn && (
           <div className="absolute top-12 left-3 right-3 z-10 flex items-center justify-between pointer-events-none">

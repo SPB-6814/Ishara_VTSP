@@ -291,7 +291,7 @@ export default function PatientPage() {
             <div className="h-[360px] sm:h-[420px] w-full">
               <LiveKitVideoCall
                 roomName={sessionId}
-                participantName="Patient (Bed 4A)"
+                participantName={bedName || 'Patient'}
                 participantIdentity={`patient-${sessionId.slice(0, 6)}`}
                 role="patient"
                 onDisconnect={() => sendStatusChange('active')}

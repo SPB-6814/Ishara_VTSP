@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useRef, useState, useEffect } from 'react'
-import { X, RotateCcw, Video } from 'lucide-react'
+import { X, RotateCcw, Video, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EMERGENCY_P0_PICTOGRAMS, ALL_CATEGORY_PICTOGRAMS } from '@/lib/pictograms'
 import { getClipUrl } from '@/lib/isl-clips'
@@ -30,11 +30,15 @@ export function ISLVideoPlayer({
   const [currentSrc, setCurrentSrc] = useState<string>(initialUrl)
   const [hasError, setHasError] = useState(false)
 
-  // Reset states whenever clip changes
+  // Reset states whenever clip changes & ensure video is strictly muted
   useEffect(() => {
     const nextUrl = videoUrl && videoUrl.startsWith('http') ? videoUrl : getClipUrl(clipKey)
     setCurrentSrc(nextUrl)
     setHasError(false)
+    if (videoRef.current) {
+      videoRef.current.muted = true
+      videoRef.current.volume = 0
+    }
   }, [videoUrl, clipKey])
 
   const resolvedHindi =
@@ -56,6 +60,8 @@ export function ISLVideoPlayer({
   const handleReplay = () => {
     if (videoRef.current) {
       videoRef.current.currentTime = 0
+      videoRef.current.muted = true
+      videoRef.current.volume = 0
       videoRef.current.play().catch(() => {})
     }
   }
@@ -104,6 +110,7 @@ export function ISLVideoPlayer({
               key={currentSrc}
               src={currentSrc}
               autoPlay
+              muted
               playsInline
               className="w-full h-full object-contain"
               onError={handleVideoError}
@@ -146,7 +153,7 @@ export function ISLVideoPlayer({
 
         {/* Bottom Control Bar */}
         <div className="p-3 bg-slate-900 border-t border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               size="sm"
@@ -156,8 +163,9 @@ export function ISLVideoPlayer({
               <RotateCcw className="w-4 h-4" />
               Replay Sign
             </Button>
-            <span className="text-xs text-slate-400 hidden sm:inline">
-              Autoplays for Deaf patient
+            <span className="text-xs text-slate-400 flex items-center gap-1">
+              <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+              <span>Muted</span>
             </span>
           </div>
 

@@ -145,4 +145,6 @@ export interface ISLClipMatch {
   clip: ISLClip
   score: number
   signedUrl: string
+  matchedBy?: 'gemini' | 'fuzzy' | 'exact'
+  reasoning?: string
 }

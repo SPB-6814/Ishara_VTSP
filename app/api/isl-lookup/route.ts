@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server'
 import { searchClips, getClipByKey, getClipUrl, resolveStorageFilename } from '@/lib/isl-clips'
+import { matchClipWithGemini } from '@/lib/gemini-isl'
 import { createServiceClient } from '@/lib/supabase/service'
+
+async function resolveSignedUrl(storageFile: string, defaultUrl: string): Promise<string> {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const supabase = createServiceClient()
+      const { data } = await supabase.storage
+        .from('isl-clips')
+        .createSignedUrl(storageFile, 3600)
+      if (data?.signedUrl) {
+        return data.signedUrl
+      }
+    } catch {}
+  }
+  return defaultUrl
+}
 
 export async function POST(request: Request) {
   try {
@@ -8,6 +24,7 @@ export async function POST(request: Request) {
     const query = (body.query || '').trim()
     const key = body.key
 
+    // Direct key lookup (e.g. clicked a quick reassurance chip)
     if (key) {
       const clip = getClipByKey(key)
       if (!clip) {
@@ -15,26 +32,14 @@ export async function POST(request: Request) {
       }
 
       const storageFile = resolveStorageFilename(clip.storage_path || clip.key)
-      let signedUrl = getClipUrl(storageFile)
-
-      // If Supabase Storage is configured, try to create a signed URL
-      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-        try {
-          const supabase = createServiceClient()
-          const { data } = await supabase.storage
-            .from('isl-clips')
-            .createSignedUrl(storageFile, 3600)
-          if (data?.signedUrl) {
-            signedUrl = data.signedUrl
-          }
-        } catch {}
-      }
+      const signedUrl = await resolveSignedUrl(storageFile, getClipUrl(storageFile))
 
       return NextResponse.json({
         match: {
           clip,
           score: 1.0,
           signedUrl,
+          matchedBy: 'exact',
         },
       })
     }
@@ -43,37 +48,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 })
     }
 
-    const matches = searchClips(query, 3)
+    // 1. Try Gemini semantic intent classification first (handles Hindi, Hinglish, medical synonyms, safety)
+    let bestMatch = await matchClipWithGemini(query)
+    let allMatches: any[] = []
 
-    if (matches.length === 0) {
+    // 2. Fallback to local Fuse.js / token overlap search if Gemini didn't match or is unreachable
+    if (!bestMatch) {
+      const fuzzyMatches = searchClips(query, 3)
+      if (fuzzyMatches.length > 0) {
+        bestMatch = {
+          ...fuzzyMatches[0],
+          matchedBy: 'fuzzy',
+        }
+        allMatches = fuzzyMatches
+      }
+    } else {
+      allMatches = [bestMatch]
+    }
+
+    if (!bestMatch) {
       return NextResponse.json({
         match: null,
         message: 'No matching ISL clip found. Please rephrase or request an interpreter.',
       })
     }
 
-    const bestMatch = matches[0]
     const storageFile = resolveStorageFilename(bestMatch.clip.storage_path || bestMatch.clip.key)
-    let signedUrl = bestMatch.signedUrl || getClipUrl(storageFile)
-
-    // Check signed URL if available
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      try {
-        const supabase = createServiceClient()
-        const { data } = await supabase.storage
-          .from('isl-clips')
-          .createSignedUrl(storageFile, 3600)
-        if (data?.signedUrl) {
-          signedUrl = data.signedUrl
-        }
-      } catch {}
-    }
-
-    bestMatch.signedUrl = signedUrl
+    bestMatch.signedUrl = await resolveSignedUrl(
+      storageFile,
+      bestMatch.signedUrl || getClipUrl(storageFile)
+    )
 
     return NextResponse.json({
       match: bestMatch,
-      allMatches: matches,
+      allMatches,
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

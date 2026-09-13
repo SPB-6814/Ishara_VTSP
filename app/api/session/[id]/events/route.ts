@@ -74,3 +74,29 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const validUuid = toValidSessionUuid(id)
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      try {
+        const supabase = createServiceClient()
+        await supabase
+          .from('session_events')
+          .delete()
+          .eq('session_id', validUuid)
+      } catch (dbErr) {
+        console.warn('Failed to delete session events from database:', dbErr)
+      }
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}

@@ -13,12 +13,14 @@ import {
   ShieldAlert,
   Filter,
   CheckCircle2,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface TranscriptFeedProps {
   events: SessionEvent[]
   initialFilterSevere?: boolean
+  onClearEvents?: () => void
 }
 
 // ─── Severe & Critical Filter Helper ──────────────────────────────────────────
@@ -146,8 +148,13 @@ function GestureTextEntry({ payload }: { payload: GestureTextPayload }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export function TranscriptFeed({ events, initialFilterSevere = true }: TranscriptFeedProps) {
+export function TranscriptFeed({
+  events,
+  initialFilterSevere = true,
+  onClearEvents,
+}: TranscriptFeedProps) {
   const [filterSevereOnly, setFilterSevereOnly] = useState(initialFilterSevere)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   const displayedEvents = useMemo(() => {
     if (!filterSevereOnly) return events
@@ -175,29 +182,71 @@ export function TranscriptFeed({ events, initialFilterSevere = true }: Transcrip
   return (
     <div className="space-y-3">
       {/* Triage Filter Bar */}
-      <div className="flex items-center justify-between px-1 pb-1">
-        <div className="flex items-center gap-1.5">
-          <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800">
+      <div className="flex items-center justify-between px-1 pb-1 gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 shrink-0">
             <ShieldAlert className="w-3 h-3" />
             {filterSevereOnly ? 'Severe & Critical Filter Active' : 'Showing All Audit Events'}
           </span>
           {filterSevereOnly && events.length > severeCount && (
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[10px] text-slate-400 truncate hidden sm:inline">
               ({events.length - severeCount} basic events filtered)
             </span>
           )}
         </div>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setFilterSevereOnly(!filterSevereOnly)}
-          className="h-6 px-2 text-[11px] font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
-        >
-          <Filter className="w-3 h-3 mr-1" />
-          {filterSevereOnly ? 'Show All' : 'Critical Only'}
-        </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setFilterSevereOnly(!filterSevereOnly)}
+            className="h-6 px-2 text-[11px] font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            <Filter className="w-3 h-3 mr-1" />
+            {filterSevereOnly ? 'Show All' : 'Critical Only'}
+          </Button>
+
+          {onClearEvents && events.length > 0 && (
+            confirmClear ? (
+              <div className="flex items-center gap-1 animate-in fade-in duration-150">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setConfirmClear(false)
+                    onClearEvents()
+                  }}
+                  className="h-6 px-2 text-[11px] font-bold bg-red-600 hover:bg-red-700 text-white rounded-md shadow-xs"
+                >
+                  Confirm Clear
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setConfirmClear(false)}
+                  className="h-6 px-1.5 text-[11px] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmClear(true)}
+                className="h-6 px-2 text-[11px] font-semibold text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md flex items-center gap-1 transition-colors"
+                title="Clear interaction log"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Clear Log</span>
+              </Button>
+            )
+          )}
+        </div>
       </div>
 
       {displayedEvents.length === 0 ? (

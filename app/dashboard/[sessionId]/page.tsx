@@ -301,6 +301,22 @@ export default function DashboardPage() {
     }
   }
 
+  const handleClearAuditTrail = async () => {
+    const count = events.length
+    if (count === 0) return
+
+    setEvents([])
+    toast.success(`Cleared ${count} interaction${count === 1 ? '' : 's'} from audit trail`)
+
+    try {
+      await fetch(`/api/session/${sessionId}/events`, {
+        method: 'DELETE',
+      })
+    } catch {
+      // Local state is already updated
+    }
+  }
+
   const handleSendISLPhrase = async (phrase?: string, clipKey?: string) => {
     const query = phrase || inputText.trim()
     if (!query && !clipKey) return
@@ -784,7 +800,11 @@ export default function DashboardPage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-4 flex-1 overflow-y-auto max-h-[600px]">
-                <TranscriptFeed events={events} initialFilterSevere={false} />
+                <TranscriptFeed
+                  events={events}
+                  initialFilterSevere={false}
+                  onClearEvents={handleClearAuditTrail}
+                />
               </CardContent>
             </Card>
           </div>

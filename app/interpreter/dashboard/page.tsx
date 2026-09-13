@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import {
@@ -67,6 +67,7 @@ export default function InterpreterDashboard() {
   const [user, setUser] = useState<any>(null)
   const [status, setStatus] = useState<'available' | 'busy' | 'offline'>('available')
   const [requests, setRequests] = useState<IncomingRequest[]>([])
+  const handledRequestsRef = useRef<Map<string, number>>(new Map())
 
   // Load authenticated user and verify session
   useEffect(() => {
@@ -123,6 +124,14 @@ export default function InterpreterDashboard() {
 
   const handleNewRequest = React.useCallback((payload: any) => {
     const sessId = payload?.sessionId || '00000000-0000-0000-0000-000000000001'
+    const now = Date.now()
+    const lastSeen = handledRequestsRef.current.get(sessId) || 0
+
+    // Suppress duplicates within 6 seconds
+    if (now - lastSeen < 6000) {
+      return
+    }
+    handledRequestsRef.current.set(sessId, now)
 
     const req: IncomingRequest = {
       id: payload?.id || `req-${sessId}`,
@@ -132,15 +141,18 @@ export default function InterpreterDashboard() {
       requestedAt: new Date().toLocaleTimeString(),
     }
 
+    // Play ringtone and show singleton toast outside state updater
+    playIncomingCallRing()
+    toast.error(`🚨 Incoming Emergency ISL Call from ${req.hospitalName}!`, {
+      id: `incoming-call-${sessId}`,
+      duration: 15000,
+    })
+
     setRequests((prev) => {
       // Deduplicate: ignore duplicate triggers for the same active session
       if (prev.some((r) => r.sessionId === req.sessionId)) {
         return prev
       }
-      playIncomingCallRing()
-      toast.error(`🚨 Incoming Emergency ISL Call from ${req.hospitalName}!`, {
-        duration: 12000,
-      })
       return [req, ...prev]
     })
   }, [])
@@ -149,10 +161,15 @@ export default function InterpreterDashboard() {
     const cancelSessId = payload?.sessionId
     if (!cancelSessId) return
 
+    toast.dismiss(`incoming-call-${cancelSessId}`)
+    handledRequestsRef.current.delete(cancelSessId)
+
     setRequests((prev) => {
       const match = prev.find((r) => r.sessionId === cancelSessId)
       if (match) {
-        toast.info(`Emergency call from ${match.patientName} was cancelled by hospital`)
+        toast.info(`Emergency call from ${match.patientName} was cancelled by hospital`, {
+          id: `cancelled-call-${cancelSessId}`,
+        })
       }
       return prev.filter((r) => r.sessionId !== cancelSessId)
     })
@@ -200,6 +217,8 @@ export default function InterpreterDashboard() {
   }, [handleNewRequest, handleCancelRequest])
 
   const handleAcceptCall = async (req: IncomingRequest) => {
+    toast.dismiss(`incoming-call-${req.sessionId}`)
+    handledRequestsRef.current.delete(req.sessionId)
     toast.success(`Connecting to ${req.patientName}...`)
 
     const statusPayload = {

@@ -8,6 +8,7 @@ import { ISLVideoPlayer } from '@/components/isl-video-player'
 import { LiveKitVideoCall } from '@/components/livekit-video-call'
 import { VisionGestureCamera } from '@/components/vision-gesture-camera'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
+import { getClipUrl } from '@/lib/isl-clips'
 import type { DetailedPictogram } from '@/lib/pictograms'
 import {
   CheckCircle2,
@@ -87,9 +88,9 @@ export default function PatientPage() {
 
   useEffect(() => {
     fetch(`/api/session?id=${sessionId}`)
-      .then((res) => res.json())
+      .then((res) => (res.ok && res.headers.get('content-type')?.includes('application/json') ? res.json() : null))
       .then((data) => {
-        if (data.session?.patient_display_name) {
+        if (data?.session?.patient_display_name) {
           setBedName(data.session.patient_display_name)
         }
       })
@@ -323,7 +324,11 @@ export default function PatientPage() {
         <ISLVideoPlayer
           clipKey={activeClip.clipKey}
           clipLabel={activeClip.label}
-          videoUrl={activeClip.clipUrl}
+          videoUrl={
+            activeClip.clipUrl && activeClip.clipUrl.startsWith('http')
+              ? activeClip.clipUrl
+              : getClipUrl(activeClip.clipKey)
+          }
           onClose={clearClip}
         />
       )}

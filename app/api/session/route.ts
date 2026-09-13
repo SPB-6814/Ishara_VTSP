@@ -15,6 +15,22 @@ export async function POST(request: Request) {
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
         const supabase = createServiceClient()
+
+        // Check if an active session already exists for this bed/patient name to prevent duplicates
+        const { data: existing } = await supabase
+          .from('sessions')
+          .select('*')
+          .eq('hospital_id', hospitalId)
+          .eq('patient_display_name', patientName)
+          .neq('status', 'closed')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (existing) {
+          return NextResponse.json({ session: existing, isExisting: true })
+        }
+
         const { data, error } = await supabase
           .from('sessions')
           .insert({
@@ -95,7 +111,7 @@ export async function GET(request: Request) {
     patient_display_name: 'Bed 4A - Ramesh Kumar (ISL)',
     status: 'active',
     active_mode: 'pictogram',
-    created_at: new Date().toISOString(),
+    created_at: '2026-09-12T06:30:00.000Z',
   }
 
   return NextResponse.json({ session: defaultSession })

@@ -6,10 +6,9 @@ import type { GestureTextPayload } from '@/hooks/use-session-realtime'
 import Image from 'next/image'
 import { EmergencyAlertBanner } from '@/components/emergency-alert-banner'
 import { TranscriptFeed, isSevereOrCriticalEvent } from '@/components/transcript-feed'
-import { DoctorPatientChat } from '@/components/doctor-patient-chat'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition'
-import { searchClips } from '@/lib/isl-clips'
+import { searchClips, getClipByKey, getClipUrl } from '@/lib/isl-clips'
 import {
   ArrowLeft,
   Video,
@@ -270,18 +269,18 @@ export default function DashboardPage() {
   // Fetch session details and previous events if available
   useEffect(() => {
     fetch(`/api/session?id=${sessionId}`)
-      .then((res) => res.json())
+      .then((res) => (res.ok && res.headers.get('content-type')?.includes('application/json') ? res.json() : null))
       .then((data) => {
-        if (data.session?.patient_display_name) {
+        if (data?.session?.patient_display_name) {
           setPatientDisplayName(data.session.patient_display_name)
         }
       })
       .catch(() => {})
 
     fetch(`/api/session/${sessionId}/events`)
-      .then((res) => res.json())
+      .then((res) => (res.ok && res.headers.get('content-type')?.includes('application/json') ? res.json() : null))
       .then((data) => {
-        if (data.events && Array.isArray(data.events) && data.events.length > 0) {
+        if (data?.events && Array.isArray(data.events) && data.events.length > 0) {
           setEvents((prev) => {
             const existingIds = new Set(prev.map((e) => e.id))
             const newEvents = data.events.filter((e: any) => !existingIds.has(e.id))
@@ -302,22 +301,58 @@ export default function DashboardPage() {
     }
   }
 
-  const handleSendISLPhrase = async (phrase?: string) => {
+  const handleSendISLPhrase = async (phrase?: string, clipKey?: string) => {
     const query = phrase || inputText.trim()
-    if (!query) return
+    if (!query && !clipKey) return
 
     setIsSearching(true)
     try {
-      const matches = searchClips(query, 1)
+      let bestClip: any = null
+      let clipUrl: string = ''
 
-      if (matches.length > 0 && matches[0]) {
-        const best = matches[0]
-        sendPlayClip(best.clip.key, best.signedUrl, best.clip.label)
-        toast.success(`Broadcasting ISL clip "${best.clip.label}" to patient tablet`)
+      // 1. Try API lookup first for server-signed Supabase URL
+      try {
+        const res = await fetch('/api/isl-lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(clipKey ? { key: clipKey } : { query }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data?.match?.clip) {
+            bestClip = data.match.clip
+            clipUrl = data.match.signedUrl || getClipUrl(bestClip.storage_path)
+          }
+        }
+      } catch (err) {
+        console.warn('API lookup error, falling back to client index', err)
+      }
+
+      // 2. Fallback to client-side search if API did not return a match
+      if (!bestClip) {
+        if (clipKey) {
+          const matched = getClipByKey(clipKey)
+          if (matched) {
+            bestClip = matched
+            clipUrl = getClipUrl(matched.storage_path)
+          }
+        }
+        if (!bestClip && query) {
+          const matches = searchClips(query, 1)
+          if (matches.length > 0 && matches[0]) {
+            bestClip = matches[0].clip
+            clipUrl = matches[0].signedUrl || getClipUrl(bestClip.storage_path)
+          }
+        }
+      }
+
+      if (bestClip && clipUrl) {
+        sendPlayClip(bestClip.key, clipUrl, bestClip.label)
+        toast.success(`Broadcasting ISL clip "${bestClip.label}" to patient tablet`)
         setInputText('')
         resetTranscript()
       } else {
-        toast.error(`No matching ISL clip found for "${query}". Try rephrasing or requesting an interpreter.`)
+        toast.error(`No matching ISL clip found for "${query || clipKey}". Try rephrasing or requesting an interpreter.`)
       }
     } catch {
       toast.error('Failed to lookup ISL sign')
@@ -611,9 +646,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Two-Column Clinical Section: Left = Communication Console, Right = Live Transcript Feed */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left Column (7 cols): Clinician Communication Console */}
-          <div className="lg:col-span-7 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          {/* Left Column: Clinician Communication Console */}
+          <div className="space-y-4">
             <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
               <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between">
@@ -687,7 +722,7 @@ export default function DashboardPage() {
                       <button
                         key={chip.key}
                         type="button"
-                        onClick={() => handleSendISLPhrase(chip.label)}
+                        onClick={() => handleSendISLPhrase(chip.label, chip.key)}
                         className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-teal-50 hover:text-[#084C5B] dark:hover:bg-teal-950/60 dark:hover:text-teal-200 border border-slate-200 dark:border-slate-700 transition-colors"
                       >
                         + {chip.label}
@@ -697,14 +732,6 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Two-Way Patient-Doctor Chat Window (Below ISL Sign Input Block) */}
-            <DoctorPatientChat
-              events={events}
-              patientDisplayName={patientDisplayName}
-              onSendISLPhrase={handleSendISLPhrase}
-              isSearching={isSearching}
-            />
 
             {/* Video Call Tile (When LiveKit is Connected) */}
             {sessionStatus === 'interpreter_connected' && (
@@ -737,9 +764,9 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Right Column (5 cols): Live Audit Trail / Transcript Feed */}
-          <div className="lg:col-span-5 space-y-4">
-            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col">
+          {/* Right Column: Live Audit Trail / Transcript Feed */}
+          <div className="space-y-4">
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
               <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -747,17 +774,17 @@ export default function DashboardPage() {
                       <Clock className="w-4 h-4 text-[#084C5B]" />
                       Live Interaction Audit Trail
                     </CardTitle>
-                    <span className="text-[10px] font-bold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 px-1.5 py-0.5 rounded">
-                      Critical Only
+                    <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-950/60 border border-teal-300 dark:border-teal-800 px-1.5 py-0.5 rounded">
+                      Live Sync
                     </span>
                   </div>
                   <span className="text-xs text-slate-400">
-                    {events.filter(isSevereOrCriticalEvent).length} severe
+                    {events.length} interaction{events.length === 1 ? '' : 's'}
                   </span>
                 </div>
               </CardHeader>
               <CardContent className="pt-4 flex-1 overflow-y-auto max-h-[600px]">
-                <TranscriptFeed events={events} initialFilterSevere={true} />
+                <TranscriptFeed events={events} initialFilterSevere={false} />
               </CardContent>
             </Card>
           </div>

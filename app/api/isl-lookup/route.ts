@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { searchClips, getClipByKey } from '@/lib/isl-clips'
+import { searchClips, getClipByKey, getClipUrl, resolveStorageFilename } from '@/lib/isl-clips'
 import { createServiceClient } from '@/lib/supabase/service'
 
 export async function POST(request: Request) {
@@ -14,14 +14,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Clip not found' }, { status: 404 })
       }
 
-      let signedUrl = `/videos/${clip.storage_path}`
+      const storageFile = resolveStorageFilename(clip.storage_path || clip.key)
+      let signedUrl = getClipUrl(storageFile)
+
       // If Supabase Storage is configured, try to create a signed URL
       if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
         try {
           const supabase = createServiceClient()
           const { data } = await supabase.storage
             .from('isl-clips')
-            .createSignedUrl(clip.storage_path, 3600)
+            .createSignedUrl(storageFile, 3600)
           if (data?.signedUrl) {
             signedUrl = data.signedUrl
           }
@@ -51,15 +53,16 @@ export async function POST(request: Request) {
     }
 
     const bestMatch = matches[0]
+    const storageFile = resolveStorageFilename(bestMatch.clip.storage_path || bestMatch.clip.key)
+    let signedUrl = bestMatch.signedUrl || getClipUrl(storageFile)
 
     // Check signed URL if available
-    let signedUrl = `/videos/${bestMatch.clip.storage_path}`
     if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       try {
         const supabase = createServiceClient()
         const { data } = await supabase.storage
           .from('isl-clips')
-          .createSignedUrl(bestMatch.clip.storage_path, 3600)
+          .createSignedUrl(storageFile, 3600)
         if (data?.signedUrl) {
           signedUrl = data.signedUrl
         }

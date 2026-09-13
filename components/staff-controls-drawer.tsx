@@ -23,7 +23,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition'
-import { searchClips } from '@/lib/isl-clips'
+import { searchClips, getClipByKey, getClipUrl } from '@/lib/isl-clips'
 import { toast } from 'sonner'
 
 interface StaffControlsDrawerProps {
@@ -79,23 +79,58 @@ export function StaffControlsDrawer({
     }
   }
 
-  const handleSendPhrase = async (phraseToSend?: string) => {
+  const handleSendPhrase = async (phraseToSend?: string, phraseKey?: string) => {
     const query = phraseToSend || inputText.trim()
-    if (!query) return
+    if (!query && !phraseKey) return
 
     setIsSearching(true)
     try {
-      // Local or API fuzzy search
-      const matches = searchClips(query, 1)
+      let bestClip: any = null
+      let clipUrl: string = ''
 
-      if (matches.length > 0 && matches[0]) {
-        const best = matches[0]
-        toast.success(`Matched ISL Sign: "${best.clip.label}" (${Math.round(best.score * 100)}% confidence)`)
-        onPlayClip(best.clip.key, best.signedUrl, best.clip.label)
+      // 1. Try API lookup first for server-signed Supabase URL
+      try {
+        const res = await fetch('/api/isl-lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(phraseKey ? { key: phraseKey } : { query }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data?.match?.clip) {
+            bestClip = data.match.clip
+            clipUrl = data.match.signedUrl || getClipUrl(bestClip.storage_path)
+          }
+        }
+      } catch (err) {
+        console.warn('API lookup error, falling back to client index', err)
+      }
+
+      // 2. Fallback to client-side search if API did not return a match
+      if (!bestClip) {
+        if (phraseKey) {
+          const matched = getClipByKey(phraseKey)
+          if (matched) {
+            bestClip = matched
+            clipUrl = getClipUrl(matched.storage_path)
+          }
+        }
+        if (!bestClip && query) {
+          const matches = searchClips(query, 1)
+          if (matches.length > 0 && matches[0]) {
+            bestClip = matches[0].clip
+            clipUrl = matches[0].signedUrl || getClipUrl(bestClip.storage_path)
+          }
+        }
+      }
+
+      if (bestClip && clipUrl) {
+        toast.success(`Broadcasting ISL clip "${bestClip.label}" to patient tablet`)
+        onPlayClip(bestClip.key, clipUrl, bestClip.label)
         setInputText('')
         resetTranscript()
       } else {
-        toast.error(`No matching ISL clip found for "${query}". Try requesting an interpreter.`)
+        toast.error(`No matching ISL clip found for "${query || phraseKey}". Try requesting an interpreter.`)
       }
     } catch {
       toast.error('Failed to lookup ISL sign')
@@ -241,7 +276,7 @@ export function StaffControlsDrawer({
                   <button
                     key={phrase.key}
                     type="button"
-                    onClick={() => handleSendPhrase(phrase.label)}
+                    onClick={() => handleSendPhrase(phrase.label, phrase.key)}
                     className="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-100 hover:bg-teal-50 hover:text-[#084C5B] hover:border-teal-300 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
                   >
                     + {phrase.label}

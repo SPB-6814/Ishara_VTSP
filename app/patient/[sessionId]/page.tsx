@@ -16,6 +16,7 @@ import {
   Shield,
   X,
   Sparkles,
+  PhoneOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -119,6 +120,103 @@ export default function PatientPage() {
       note: 'Bedside request from patient tablet',
     })
     toast.info('Paging ISL interpreter relay pool...')
+  }
+
+  const handleDisconnectInterpreter = async () => {
+    toast.info('Live video call disconnected / वीडियो कॉल समाप्त किया गया')
+    sendStatusChange('active')
+    try {
+      await fetch(`/api/session/${sessionId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'active',
+          activeMode: 'pictogram',
+        }),
+      })
+    } catch {}
+  }
+
+  // When live interpreter is connected, provide an immersive full-screen video call
+  // stage (matching interpreter portal layout) without small letterboxing or distractions
+  if (sessionStatus === 'interpreter_connected') {
+    return (
+      <main className="h-screen w-screen bg-slate-950 text-white flex flex-col overflow-hidden p-2 sm:p-4">
+        {/* Top Header for Patient Live Video Call */}
+        <header className="flex items-center justify-between pb-2 shrink-0">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDisconnectInterpreter}
+              className="bg-red-950/60 border-red-500/60 text-red-200 hover:bg-red-900 hover:text-white text-xs font-bold flex items-center gap-1.5 rounded-xl h-9 px-3.5 transition-all shadow-sm"
+            >
+              <PhoneOff className="w-3.5 h-3.5 text-red-400" />
+              <span>Disconnect Call / समाप्त करें</span>
+            </Button>
+
+            <div className="flex items-center gap-2">
+              <div className="relative w-6 h-6 sm:w-7 sm:h-7 rounded-lg overflow-hidden bg-teal-500/20 flex items-center justify-center shrink-0">
+                <Image
+                  src="/logo.png"
+                  alt="Ishara Logo"
+                  fill
+                  sizes="28px"
+                  className="object-contain"
+                />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-sm sm:text-base font-black text-teal-300">
+                    Ishara Live Relay Room
+                  </h1>
+                  <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-black bg-emerald-950 text-emerald-300 border border-emerald-700/50 animate-pulse">
+                    LIVE ISL
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 hidden md:block">
+                  Connected to Certified ISL Video Interpreter • सांकेतिक भाषा अनुवादक जुड़ा हुआ है
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-950/80 text-indigo-200 border border-indigo-700/50 font-mono">
+              {bedName}
+            </span>
+            <span className="text-xs font-mono text-slate-400 hidden sm:inline">
+              Session: <span className="text-white font-bold">{sessionId.slice(0, 8)}...</span>
+            </span>
+          </div>
+        </header>
+
+        {/* Real LiveKit WebRTC Video Room taking full remaining viewport */}
+        <div className="flex-1 w-full h-full min-h-0 overflow-hidden">
+          <LiveKitVideoCall
+            roomName={sessionId}
+            participantName={bedName || 'Patient'}
+            participantIdentity={`patient-${sessionId.slice(0, 6)}`}
+            role="patient"
+            onDisconnect={handleDisconnectInterpreter}
+          />
+        </div>
+
+        {/* ISL Video Player Modal (Triggered automatically if clip received during call) */}
+        {activeClip && (
+          <ISLVideoPlayer
+            clipKey={activeClip.clipKey}
+            clipLabel={activeClip.label}
+            videoUrl={
+              activeClip.clipUrl && activeClip.clipUrl.startsWith('http')
+                ? activeClip.clipUrl
+                : getClipUrl(activeClip.clipKey)
+            }
+            onClose={clearClip}
+          />
+        )}
+      </main>
+    )
   }
 
   return (
@@ -236,7 +334,7 @@ export default function PatientPage() {
               </Button>
             </div>
           </div>
-        ) : sessionStatus !== 'interpreter_connected' && (
+        ) : (
           <div className="w-full p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-indigo-50 to-teal-50 dark:from-indigo-950/30 dark:to-teal-950/30 border border-indigo-200 dark:border-indigo-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-[#4F46E5] text-white shrink-0 shadow">
@@ -295,36 +393,7 @@ export default function PatientPage() {
           </div>
         )}
 
-        {/* Live Interpreter Video Window (Direct Embedded WebRTC) */}
-        {sessionStatus === 'interpreter_connected' && (
-          <div className="w-full rounded-2xl overflow-hidden bg-slate-950 border-4 border-indigo-500 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="bg-indigo-950 px-4 py-2 border-b border-indigo-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Video className="w-4 h-4 text-indigo-300 animate-pulse" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider">
-                  Live ISL Interpreter Relay Connected • लाइव वीडियो अनुवादक जुड़ा हुआ है
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => sendStatusChange('active')}
-                className="h-7 text-xs border-indigo-400 bg-indigo-900/80 text-white hover:bg-indigo-800 font-bold"
-              >
-                Disconnect Call
-              </Button>
-            </div>
-            <div className="h-[360px] sm:h-[420px] w-full">
-              <LiveKitVideoCall
-                roomName={sessionId}
-                participantName={bedName || 'Patient'}
-                participantIdentity={`patient-${sessionId.slice(0, 6)}`}
-                role="patient"
-                onDisconnect={() => sendStatusChange('active')}
-              />
-            </div>
-          </div>
-        )}
+
 
         {/* P3 — Core Feature: AI Sign Language Recognition Camera Subscreen (Positioned Above Pictograms) */}
         <section

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import '@livekit/components-styles'
 import {
   LiveKitRoom,
@@ -82,18 +82,42 @@ function TwoPartyVideoStage({
     }
   }
 
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement))
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+    }
+  }, [])
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {})
-      setIsFullscreen(true)
+      const el = containerRef.current || document.documentElement
+      if (el.requestFullscreen) {
+        el.requestFullscreen().catch(() => {})
+      } else if ((el as any).webkitRequestFullscreen) {
+        ;(el as any).webkitRequestFullscreen()
+      }
     } else {
-      document.exitFullscreen().catch(() => {})
-      setIsFullscreen(false)
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {})
+      } else if ((document as any).webkitExitFullscreen) {
+        ;(document as any).webkitExitFullscreen()
+      }
     }
   }
 
   return (
-    <div className="relative w-full h-full min-h-[400px] bg-slate-950 text-white flex flex-col rounded-2xl overflow-hidden border-2 border-indigo-900 shadow-2xl">
+    <div
+      ref={containerRef}
+      className={`relative w-full h-full min-h-0 bg-slate-950 text-white flex flex-col overflow-hidden shadow-2xl transition-all ${
+        isFullscreen ? 'rounded-none border-0' : 'rounded-2xl border-2 border-indigo-900'
+      }`}
+    >
       {/* Top Floating Status Pill */}
       <div className="absolute top-3 inset-x-3 z-30 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-2 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 pointer-events-auto">
@@ -129,7 +153,7 @@ function TwoPartyVideoStage({
       </div>
 
       {/* Main Video Stage */}
-      <div className="flex-1 relative w-full h-full grid grid-cols-1 md:grid-cols-2 gap-2 p-2 pt-14 pb-16">
+      <div className="flex-1 relative w-full h-full min-h-0 grid grid-cols-1 md:grid-cols-2 gap-2 p-2 pt-14 pb-16">
         {/* Tile 1: Remote Participant (The other party) */}
         <div className="relative w-full h-full bg-slate-900 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center">
           {remoteTrack && isTrackReference(remoteTrack) && remoteTrack.publication?.isSubscribed ? (
@@ -285,7 +309,7 @@ export function LiveKitVideoCall({
 
   if (loading) {
     return (
-      <div className="w-full h-full min-h-[400px] bg-slate-950 rounded-2xl flex flex-col items-center justify-center text-white p-6 space-y-3">
+      <div className="w-full h-full min-h-[320px] bg-slate-950 rounded-2xl flex flex-col items-center justify-center text-white p-6 space-y-3">
         <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
         <p className="text-sm font-bold">Securing LiveKit WebRTC Session...</p>
         <span className="text-xs text-slate-400">Minting encrypted JWT token for room {roomName}</span>
@@ -295,7 +319,7 @@ export function LiveKitVideoCall({
 
   if (error || !token || !serverUrl) {
     return (
-      <div className="w-full h-full min-h-[400px] bg-slate-950 rounded-2xl flex flex-col items-center justify-center text-white p-6 text-center space-y-3 border border-red-800">
+      <div className="w-full h-full min-h-[320px] bg-slate-950 rounded-2xl flex flex-col items-center justify-center text-white p-6 text-center space-y-3 border border-red-800">
         <div className="p-3 bg-red-900/50 rounded-full text-red-300">
           <Wifi className="w-8 h-8" />
         </div>
@@ -325,7 +349,7 @@ export function LiveKitVideoCall({
       }}
       onDisconnected={onDisconnect}
       data-lk-theme="default"
-      className="w-full h-full"
+      className="w-full h-full flex flex-col min-h-0"
     >
       <TwoPartyVideoStage
         participantName={participantName}

@@ -136,12 +136,12 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0B1120] text-slate-900 dark:text-white overflow-x-hidden">
       {/* ───────── NAVBAR ───────── */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? 'bg-[#0B1120]/80 backdrop-blur-xl border-b border-white/5 shadow-lg shadow-black/20'
+            ? 'bg-white/80 dark:bg-[#0B1120]/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/5 shadow-lg shadow-slate-900/5 dark:shadow-black/20'
             : 'bg-transparent'
         }`}
       >
@@ -170,7 +170,7 @@ export default function LandingPage() {
                 <a
                   key={item}
                   href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
-                  className="text-sm text-slate-400 hover:text-white transition-colors duration-200"
+                  className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200"
                 >
                   {item}
                 </a>
@@ -191,7 +191,7 @@ export default function LandingPage() {
             {/* Mobile Menu Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-slate-400 hover:text-white"
+              className="md:hidden p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               aria-label="Toggle menu"
             >
               {mobileMenuOpen ? (
@@ -205,13 +205,13 @@ export default function LandingPage() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#0B1120]/95 backdrop-blur-xl border-t border-white/5 px-4 py-4 space-y-3">
+          <div className="md:hidden bg-white/95 dark:bg-[#0B1120]/95 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 px-4 py-4 space-y-3">
             {['Features', 'How It Works', 'Technology'].map((item) => (
               <a
                 key={item}
                 href={`#${item.toLowerCase().replace(/\s+/g, '-')}`}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-sm text-slate-400 hover:text-white py-2"
+                className="block text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white py-2"
               >
                 {item}
               </a>
@@ -230,12 +230,21 @@ export default function LandingPage() {
       <section className="relative pt-32 pb-20 lg:pt-44 lg:pb-32 overflow-hidden">
         {/* Animated gradient background */}
         <div className="absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0B1120] via-[#0B1120] to-[#084C5B]/40 animate-[gradientShift_8s_ease-in-out_infinite]" />
-          <div className="absolute top-1/4 -right-32 w-[500px] h-[500px] bg-[#084C5B]/20 rounded-full blur-[128px] animate-[pulse_6s_ease-in-out_infinite]" />
-          <div className="absolute bottom-0 -left-32 w-[400px] h-[400px] bg-[#0D748A]/10 rounded-full blur-[100px] animate-[pulse_8s_ease-in-out_infinite_2s]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-slate-50 to-[#084C5B]/10 dark:from-[#0B1120] dark:via-[#0B1120] dark:to-[#084C5B]/40 animate-[gradientShift_8s_ease-in-out_infinite]" />
+          <div className="absolute top-1/4 -right-32 w-[500px] h-[500px] bg-[#084C5B]/8 dark:bg-[#084C5B]/20 rounded-full blur-[128px] animate-[pulse_6s_ease-in-out_infinite]" />
+          <div className="absolute bottom-0 -left-32 w-[400px] h-[400px] bg-[#0D748A]/5 dark:bg-[#0D748A]/10 rounded-full blur-[100px] animate-[pulse_8s_ease-in-out_infinite_2s]" />
           {/* Grid pattern overlay */}
           <div
-            className="absolute inset-0 opacity-[0.03]"
+            className="absolute inset-0 opacity-[0.04] dark:opacity-[0.03]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(0,0,0,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.08) 1px, transparent 1px)',
+              backgroundSize: '64px 64px',
+            }}
+          />
+          {/* Dark-mode grid (white lines) layered on top */}
+          <div
+            className="absolute inset-0 opacity-0 dark:opacity-[0.03]"
             style={{
               backgroundImage:
                 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
@@ -248,7 +257,7 @@ export default function LandingPage() {
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
             <ScrollReveal>
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#084C5B]/20 border border-[#084C5B]/30 text-[#5BBFD4] text-xs font-semibold mb-8 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#084C5B]/10 dark:bg-[#084C5B]/20 border border-[#084C5B]/20 dark:border-[#084C5B]/30 text-[#084C5B] dark:text-[#5BBFD4] text-xs font-semibold mb-8 backdrop-blur-sm">
                 <Zap className="w-3.5 h-3.5" />
                 Bit N Build 2026 · Track 1: Access &amp; Inclusion
               </div>
@@ -258,7 +267,7 @@ export default function LandingPage() {
             <ScrollReveal delay={100}>
               <h1 className="font-heading text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1] mb-6">
                 Bridging Silence in{' '}
-                <span className="bg-gradient-to-r from-[#0D748A] via-[#5BBFD4] to-[#0D748A] bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-[#084C5B] via-[#0D748A] to-[#084C5B] dark:from-[#0D748A] dark:via-[#5BBFD4] dark:to-[#0D748A] bg-clip-text text-transparent">
                   Clinical Care
                 </span>
               </h1>
@@ -266,14 +275,14 @@ export default function LandingPage() {
 
             {/* Hindi subtitle */}
             <ScrollReveal delay={200}>
-              <p className="text-lg sm:text-xl text-[#5BBFD4]/60 font-medium mb-4 font-heading">
+              <p className="text-lg sm:text-xl text-[#084C5B]/50 dark:text-[#5BBFD4]/60 font-medium mb-4 font-heading">
                 चिकित्सा देखभाल में मौन को पाटना
               </p>
             </ScrollReveal>
 
             {/* Description */}
             <ScrollReveal delay={300}>
-              <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+              <p className="text-base sm:text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
                 A zero-latency hospital communication bridge connecting deaf
                 patients, clinical staff, and certified Indian Sign Language
                 interpreters — powered by AI, WebRTC, and in-browser computer
@@ -293,7 +302,7 @@ export default function LandingPage() {
                 </Link>
                 <a
                   href="#how-it-works"
-                  className="group inline-flex items-center gap-2.5 px-8 py-3.5 border border-white/10 hover:border-white/25 text-slate-300 hover:text-white font-semibold rounded-xl transition-all duration-300 hover:bg-white/5"
+                  className="group inline-flex items-center gap-2.5 px-8 py-3.5 border border-slate-300 dark:border-white/10 hover:border-slate-400 dark:hover:border-white/25 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-semibold rounded-xl transition-all duration-300 hover:bg-slate-100 dark:hover:bg-white/5"
                 >
                   <Play className="w-4 h-4" />
                   See How It Works
@@ -327,10 +336,10 @@ export default function LandingPage() {
                 ].map((stat, i) => (
                   <div
                     key={i}
-                    className="relative group px-5 py-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:border-[#084C5B]/40 transition-all duration-300 hover:bg-white/[0.05]"
+                    className="relative group px-5 py-4 rounded-xl bg-white/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] hover:border-[#084C5B]/30 dark:hover:border-[#084C5B]/40 transition-all duration-300 hover:bg-white dark:hover:bg-white/[0.05] shadow-sm dark:shadow-none"
                   >
-                    <stat.icon className="w-4 h-4 text-[#5BBFD4]/50 mb-2 mx-auto" />
-                    <div className="text-2xl sm:text-3xl font-heading font-bold text-white">
+                    <stat.icon className="w-4 h-4 text-[#0D748A]/50 dark:text-[#5BBFD4]/50 mb-2 mx-auto" />
+                    <div className="text-2xl sm:text-3xl font-heading font-bold text-slate-900 dark:text-white">
                       {stat.value === 0 ? (
                         <span className="text-[#DC2626]">0</span>
                       ) : (
@@ -341,7 +350,7 @@ export default function LandingPage() {
                         />
                       )}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-slate-500 dark:text-slate-500 mt-1">
                       {stat.label}
                     </div>
                   </div>
@@ -357,14 +366,14 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="max-w-3xl mx-auto text-center mb-14">
-              <p className="text-[#5BBFD4] text-sm font-semibold uppercase tracking-widest mb-4">
+              <p className="text-[#0D748A] dark:text-[#5BBFD4] text-sm font-semibold uppercase tracking-widest mb-4">
                 The Problem
               </p>
               <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-6">
                 When a deaf patient arrives in an{' '}
                 <span className="text-[#DC2626]">emergency</span>...
               </h2>
-              <p className="text-slate-400 text-lg leading-relaxed">
+              <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">
                 Crucial clinical information — allergies, surgical history, pain
                 locations, and informed consent — is lost or fatally
                 misunderstood.
@@ -394,7 +403,7 @@ export default function LandingPage() {
               },
             ].map((item, i) => (
               <ScrollReveal key={i} delay={i * 150}>
-                <div className="relative p-6 rounded-2xl bg-white/[0.02] border border-white/[0.06] hover:border-white/10 transition-all duration-300 group">
+                <div className="relative p-6 rounded-2xl bg-white/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 dark:hover:border-white/10 transition-all duration-300 group shadow-sm dark:shadow-none">
                   <div
                     className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
                     style={{ backgroundColor: `${item.accent}15` }}
@@ -407,7 +416,7 @@ export default function LandingPage() {
                   <h3 className="font-heading text-lg font-semibold mb-2">
                     {item.title}
                   </h3>
-                  <p className="text-sm text-slate-400 leading-relaxed">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                     {item.desc}
                   </p>
                 </div>
@@ -420,18 +429,18 @@ export default function LandingPage() {
       {/* ───────── FEATURES BENTO GRID ───────── */}
       <section id="features" className="py-20 lg:py-28 relative">
         <div className="absolute inset-0 -z-10">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#084C5B]/8 rounded-full blur-[160px]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[#084C5B]/4 dark:bg-[#084C5B]/8 rounded-full blur-[160px]" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-14">
-              <p className="text-[#5BBFD4] text-sm font-semibold uppercase tracking-widest mb-4">
+              <p className="text-[#0D748A] dark:text-[#5BBFD4] text-sm font-semibold uppercase tracking-widest mb-4">
                 The 5 Pillars
               </p>
               <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
                 Purpose-Built for{' '}
-                <span className="bg-gradient-to-r from-[#0D748A] to-[#5BBFD4] bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-[#084C5B] to-[#0D748A] dark:from-[#0D748A] dark:to-[#5BBFD4] bg-clip-text text-transparent">
                   Clinical Reality
                 </span>
               </h2>
@@ -441,21 +450,21 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
             {/* Pillar 1 — Pictogram Grid (large) */}
             <ScrollReveal delay={0} className="md:col-span-2">
-              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.06] hover:border-[#084C5B]/40 transition-all duration-500 overflow-hidden">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-[#084C5B]/10 rounded-full blur-[80px] group-hover:bg-[#084C5B]/20 transition-all duration-700" />
+              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/90 to-white/60 dark:from-white/[0.04] dark:to-white/[0.01] border border-slate-200/80 dark:border-white/[0.06] hover:border-[#084C5B]/30 dark:hover:border-[#084C5B]/40 transition-all duration-500 overflow-hidden shadow-sm dark:shadow-none">
+                <div className="absolute top-0 right-0 w-48 h-48 bg-[#084C5B]/5 dark:bg-[#084C5B]/10 rounded-full blur-[80px] group-hover:bg-[#084C5B]/10 dark:group-hover:bg-[#084C5B]/20 transition-all duration-700" />
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-xl bg-[#084C5B]/15 flex items-center justify-center mb-5">
-                    <LayoutGrid className="w-6 h-6 text-[#5BBFD4]" />
+                  <div className="w-12 h-12 rounded-xl bg-[#084C5B]/10 dark:bg-[#084C5B]/15 flex items-center justify-center mb-5">
+                    <LayoutGrid className="w-6 h-6 text-[#0D748A] dark:text-[#5BBFD4]" />
                   </div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#DC2626]/15 text-[#EF4444] rounded-full">
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#DC2626]/10 dark:bg-[#DC2626]/15 text-[#DC2626] dark:text-[#EF4444] rounded-full">
                       P0 — Critical
                     </span>
                   </div>
                   <h3 className="font-heading text-xl font-bold mb-2">
                     Tactile Emergency Pictogram Grid
                   </h3>
-                  <p className="text-sm text-slate-400 leading-relaxed max-w-lg">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg">
                     40+ WCAG AAA high-contrast medical pictograms organized by
                     Emergency, Pain, Allergies, and Basic Needs. Large touch
                     targets with bilingual Hindi-English labels. Wong-Baker pain
@@ -468,19 +477,19 @@ export default function LandingPage() {
 
             {/* Pillar 2 — Gemini AI */}
             <ScrollReveal delay={100}>
-              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.06] hover:border-[#084C5B]/40 transition-all duration-500 overflow-hidden">
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#0D748A]/10 rounded-full blur-[60px] group-hover:bg-[#0D748A]/20 transition-all duration-700" />
+              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/90 to-white/60 dark:from-white/[0.04] dark:to-white/[0.01] border border-slate-200/80 dark:border-white/[0.06] hover:border-[#084C5B]/30 dark:hover:border-[#084C5B]/40 transition-all duration-500 overflow-hidden shadow-sm dark:shadow-none">
+                <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#0D748A]/5 dark:bg-[#0D748A]/10 rounded-full blur-[60px] group-hover:bg-[#0D748A]/10 dark:group-hover:bg-[#0D748A]/20 transition-all duration-700" />
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-xl bg-[#084C5B]/15 flex items-center justify-center mb-5">
-                    <Sparkles className="w-6 h-6 text-[#5BBFD4]" />
+                  <div className="w-12 h-12 rounded-xl bg-[#084C5B]/10 dark:bg-[#084C5B]/15 flex items-center justify-center mb-5">
+                    <Sparkles className="w-6 h-6 text-[#0D748A] dark:text-[#5BBFD4]" />
                   </div>
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#084C5B]/20 text-[#5BBFD4] rounded-full">
+                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#084C5B]/10 dark:bg-[#084C5B]/20 text-[#084C5B] dark:text-[#5BBFD4] rounded-full">
                     P1
                   </span>
                   <h3 className="font-heading text-xl font-bold mb-2 mt-2">
                     AI Sign Language Matching
                   </h3>
-                  <p className="text-sm text-slate-400 leading-relaxed">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                     Gemini AI classifies Hindi, English, and Hinglish clinical
                     speech into ISL video clips in under 400ms. Built-in negation
                     safety rejects contradictory commands.
@@ -491,19 +500,19 @@ export default function LandingPage() {
 
             {/* Pillar 3 — LiveKit */}
             <ScrollReveal delay={150}>
-              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.06] hover:border-[#4F46E5]/30 transition-all duration-500 overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#4F46E5]/8 rounded-full blur-[60px] group-hover:bg-[#4F46E5]/15 transition-all duration-700" />
+              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/90 to-white/60 dark:from-white/[0.04] dark:to-white/[0.01] border border-slate-200/80 dark:border-white/[0.06] hover:border-[#4F46E5]/20 dark:hover:border-[#4F46E5]/30 transition-all duration-500 overflow-hidden shadow-sm dark:shadow-none">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[#4F46E5]/5 dark:bg-[#4F46E5]/8 rounded-full blur-[60px] group-hover:bg-[#4F46E5]/10 dark:group-hover:bg-[#4F46E5]/15 transition-all duration-700" />
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-xl bg-[#4F46E5]/15 flex items-center justify-center mb-5">
-                    <Video className="w-6 h-6 text-[#818CF8]" />
+                  <div className="w-12 h-12 rounded-xl bg-[#4F46E5]/10 dark:bg-[#4F46E5]/15 flex items-center justify-center mb-5">
+                    <Video className="w-6 h-6 text-[#4F46E5] dark:text-[#818CF8]" />
                   </div>
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#4F46E5]/15 text-[#818CF8] rounded-full">
+                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#4F46E5]/10 dark:bg-[#4F46E5]/15 text-[#4F46E5] dark:text-[#818CF8] rounded-full">
                     P2
                   </span>
                   <h3 className="font-heading text-xl font-bold mb-2 mt-2">
                     Live Interpreter Relay
                   </h3>
-                  <p className="text-sm text-slate-400 leading-relaxed">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                     Full-duplex WebRTC video via LiveKit Cloud. 30-second
                     escalation SLA with live countdown. Dual-tone emergency
                     chime paging system.
@@ -514,21 +523,21 @@ export default function LandingPage() {
 
             {/* Pillar 4 — Vision AI (large) */}
             <ScrollReveal delay={200} className="md:col-span-2">
-              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.06] hover:border-[#084C5B]/40 transition-all duration-500 overflow-hidden">
-                <div className="absolute bottom-0 right-0 w-48 h-48 bg-[#0D748A]/8 rounded-full blur-[80px] group-hover:bg-[#0D748A]/15 transition-all duration-700" />
+              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/90 to-white/60 dark:from-white/[0.04] dark:to-white/[0.01] border border-slate-200/80 dark:border-white/[0.06] hover:border-[#084C5B]/30 dark:hover:border-[#084C5B]/40 transition-all duration-500 overflow-hidden shadow-sm dark:shadow-none">
+                <div className="absolute bottom-0 right-0 w-48 h-48 bg-[#0D748A]/4 dark:bg-[#0D748A]/8 rounded-full blur-[80px] group-hover:bg-[#0D748A]/8 dark:group-hover:bg-[#0D748A]/15 transition-all duration-700" />
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-xl bg-[#084C5B]/15 flex items-center justify-center mb-5">
-                    <Camera className="w-6 h-6 text-[#5BBFD4]" />
+                  <div className="w-12 h-12 rounded-xl bg-[#084C5B]/10 dark:bg-[#084C5B]/15 flex items-center justify-center mb-5">
+                    <Camera className="w-6 h-6 text-[#0D748A] dark:text-[#5BBFD4]" />
                   </div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#16A34A]/15 text-[#4ADE80] rounded-full">
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#16A34A]/10 dark:bg-[#16A34A]/15 text-[#16A34A] dark:text-[#4ADE80] rounded-full">
                       P3 — Standout Feature
                     </span>
                   </div>
                   <h3 className="font-heading text-xl font-bold mb-2">
                     In-Browser Vision AI
                   </h3>
-                  <p className="text-sm text-slate-400 leading-relaxed max-w-lg">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg">
                     100% client-side machine learning via WebAssembly. MediaPipe
                     tracks 21 3D hand coordinates + 12 facial blendshapes.
                     Custom Random Forest classifier recognizes 24 clinical ISL
@@ -541,18 +550,18 @@ export default function LandingPage() {
 
             {/* Pillar 5 — Audit Trail */}
             <ScrollReveal delay={250}>
-              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.01] border border-white/[0.06] hover:border-[#084C5B]/40 transition-all duration-500 overflow-hidden">
+              <div className="group relative h-full p-7 rounded-2xl bg-gradient-to-br from-white/90 to-white/60 dark:from-white/[0.04] dark:to-white/[0.01] border border-slate-200/80 dark:border-white/[0.06] hover:border-[#084C5B]/30 dark:hover:border-[#084C5B]/40 transition-all duration-500 overflow-hidden shadow-sm dark:shadow-none">
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-xl bg-[#084C5B]/15 flex items-center justify-center mb-5">
-                    <Shield className="w-6 h-6 text-[#5BBFD4]" />
+                  <div className="w-12 h-12 rounded-xl bg-[#084C5B]/10 dark:bg-[#084C5B]/15 flex items-center justify-center mb-5">
+                    <Shield className="w-6 h-6 text-[#0D748A] dark:text-[#5BBFD4]" />
                   </div>
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#084C5B]/20 text-[#5BBFD4] rounded-full">
+                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#084C5B]/10 dark:bg-[#084C5B]/20 text-[#084C5B] dark:text-[#5BBFD4] rounded-full">
                     P4
                   </span>
                   <h3 className="font-heading text-xl font-bold mb-2 mt-2">
                     Medico-Legal Audit Trail
                   </h3>
-                  <p className="text-sm text-slate-400 leading-relaxed">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                     Immutable timestamped event ledger for every interaction.
                     Dynamic bed resolution, QR pairing, and clinical compliance
                     documentation.
@@ -569,12 +578,12 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-16">
-              <p className="text-[#5BBFD4] text-sm font-semibold uppercase tracking-widest mb-4">
+              <p className="text-[#0D748A] dark:text-[#5BBFD4] text-sm font-semibold uppercase tracking-widest mb-4">
                 How It Works
               </p>
               <h2 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
                 Three Portals,{' '}
-                <span className="bg-gradient-to-r from-[#0D748A] to-[#5BBFD4] bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-[#084C5B] to-[#0D748A] dark:from-[#0D748A] dark:to-[#5BBFD4] bg-clip-text text-transparent">
                   One Bridge
                 </span>
               </h2>
@@ -583,7 +592,7 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-0 max-w-5xl mx-auto relative">
             {/* Connector line (desktop only) */}
-            <div className="hidden lg:block absolute top-24 left-[16.67%] right-[16.67%] h-px bg-gradient-to-r from-[#084C5B]/50 via-[#0D748A]/60 to-[#084C5B]/50" />
+            <div className="hidden lg:block absolute top-24 left-[16.67%] right-[16.67%] h-px bg-gradient-to-r from-[#084C5B]/30 via-[#0D748A]/40 to-[#084C5B]/30 dark:from-[#084C5B]/50 dark:via-[#0D748A]/60 dark:to-[#084C5B]/50" />
 
             {[
               {
@@ -612,7 +621,7 @@ export default function LandingPage() {
                 <div className="relative flex flex-col items-center text-center px-6">
                   {/* Step circle */}
                   <div
-                    className="relative w-20 h-20 rounded-2xl flex items-center justify-center mb-6 border border-white/[0.08]"
+                    className="relative w-20 h-20 rounded-2xl flex items-center justify-center mb-6 border border-slate-200/80 dark:border-white/[0.08]"
                     style={{ backgroundColor: `${item.color}12` }}
                   >
                     <item.icon
@@ -620,14 +629,14 @@ export default function LandingPage() {
                       style={{ color: item.color }}
                     />
                     {/* Step number badge */}
-                    <span className="absolute -top-2 -right-2 w-7 h-7 bg-[#0B1120] border border-white/10 rounded-full flex items-center justify-center text-xs font-bold text-slate-400">
+                    <span className="absolute -top-2 -right-2 w-7 h-7 bg-white dark:bg-[#0B1120] border border-slate-200 dark:border-white/10 rounded-full flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400">
                       {item.step}
                     </span>
                   </div>
                   <h3 className="font-heading text-lg font-bold mb-2">
                     {item.title}
                   </h3>
-                  <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-xs">
                     {item.desc}
                   </p>
                 </div>
@@ -639,12 +648,12 @@ export default function LandingPage() {
 
       {/* ───────── TECHNOLOGY STACK ───────── */}
       <section id="technology" className="py-20 lg:py-24 relative">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-[#084C5B]/5 to-transparent" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-[#084C5B]/3 dark:via-[#084C5B]/5 to-transparent" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
             <div className="text-center mb-12">
-              <p className="text-[#5BBFD4] text-sm font-semibold uppercase tracking-widest mb-4">
+              <p className="text-[#0D748A] dark:text-[#5BBFD4] text-sm font-semibold uppercase tracking-widest mb-4">
                 Technology
               </p>
               <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight">
@@ -656,26 +665,30 @@ export default function LandingPage() {
           <ScrollReveal delay={200}>
             <div className="flex flex-wrap items-center justify-center gap-3 max-w-4xl mx-auto">
               {[
-                { name: 'Next.js 16', color: '#FFFFFF' },
-                { name: 'React 19', color: '#61DAFB' },
-                { name: 'TypeScript 5', color: '#3178C6' },
-                { name: 'Supabase', color: '#3FCF8E' },
-                { name: 'LiveKit WebRTC', color: '#FF6B6B' },
-                { name: 'Google Gemini AI', color: '#4285F4' },
-                { name: 'MediaPipe WASM', color: '#0097A7' },
-                { name: 'Tailwind CSS v4', color: '#38BDF8' },
-                { name: 'Bun Runtime', color: '#FBF0DF' },
-                { name: 'Random Forest ML', color: '#16A34A' },
+                { name: 'Next.js 16', color: '#000000', colorDark: '#FFFFFF' },
+                { name: 'React 19', color: '#61DAFB', colorDark: '#61DAFB' },
+                { name: 'TypeScript 5', color: '#3178C6', colorDark: '#3178C6' },
+                { name: 'Supabase', color: '#3FCF8E', colorDark: '#3FCF8E' },
+                { name: 'LiveKit WebRTC', color: '#FF6B6B', colorDark: '#FF6B6B' },
+                { name: 'Google Gemini AI', color: '#4285F4', colorDark: '#4285F4' },
+                { name: 'MediaPipe WASM', color: '#0097A7', colorDark: '#0097A7' },
+                { name: 'Tailwind CSS v4', color: '#38BDF8', colorDark: '#38BDF8' },
+                { name: 'Bun Runtime', color: '#C4956A', colorDark: '#FBF0DF' },
+                { name: 'Random Forest ML', color: '#16A34A', colorDark: '#16A34A' },
               ].map((tech, i) => (
                 <div
                   key={i}
-                  className="group inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.06] hover:border-white/15 transition-all duration-300 hover:bg-white/[0.06]"
+                  className="group inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] hover:border-slate-300 dark:hover:border-white/15 transition-all duration-300 hover:bg-white dark:hover:bg-white/[0.06] shadow-sm dark:shadow-none"
                 >
                   <span
-                    className="w-2 h-2 rounded-full"
+                    className="w-2 h-2 rounded-full hidden dark:inline-block"
+                    style={{ backgroundColor: tech.colorDark }}
+                  />
+                  <span
+                    className="w-2 h-2 rounded-full inline-block dark:hidden"
                     style={{ backgroundColor: tech.color }}
                   />
-                  <span className="text-sm text-slate-300 font-medium">
+                  <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">
                     {tech.name}
                   </span>
                 </div>
@@ -689,19 +702,19 @@ export default function LandingPage() {
       <section className="py-20 lg:py-28 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <ScrollReveal>
-            <div className="relative max-w-3xl mx-auto text-center p-10 sm:p-14 rounded-3xl bg-gradient-to-br from-[#084C5B]/15 to-[#0D748A]/5 border border-[#084C5B]/20 overflow-hidden">
+            <div className="relative max-w-3xl mx-auto text-center p-10 sm:p-14 rounded-3xl bg-gradient-to-br from-[#084C5B]/8 to-[#0D748A]/3 dark:from-[#084C5B]/15 dark:to-[#0D748A]/5 border border-[#084C5B]/15 dark:border-[#084C5B]/20 overflow-hidden">
               {/* Glow */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-[#084C5B]/20 rounded-full blur-[80px]" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 bg-[#084C5B]/10 dark:bg-[#084C5B]/20 rounded-full blur-[80px]" />
 
               <div className="relative">
                 <h2 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight mb-4">
                   Ready to bridge the{' '}
-                  <span className="bg-gradient-to-r from-[#0D748A] to-[#5BBFD4] bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-[#084C5B] to-[#0D748A] dark:from-[#0D748A] dark:to-[#5BBFD4] bg-clip-text text-transparent">
                     communication gap
                   </span>
                   ?
                 </h2>
-                <p className="text-slate-400 text-lg mb-8 max-w-lg mx-auto">
+                <p className="text-slate-500 dark:text-slate-400 text-lg mb-8 max-w-lg mx-auto">
                   Explore the platform as a doctor, interpreter, or patient.
                   Pre-seeded demo accounts ready for instant evaluation.
                 </p>
@@ -717,7 +730,7 @@ export default function LandingPage() {
                     href="https://github.com/SPB-6814/Ishara_VTSP"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+                    className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                   >
                     <Code2 className="w-4 h-4" />
                     View on GitHub
@@ -731,7 +744,7 @@ export default function LandingPage() {
       </section>
 
       {/* ───────── FOOTER ───────── */}
-      <footer className="border-t border-white/[0.04] py-8">
+      <footer className="border-t border-slate-200/80 dark:border-white/[0.04] py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
@@ -742,14 +755,14 @@ export default function LandingPage() {
                 height={24}
                 className="rounded"
               />
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-slate-500 dark:text-slate-500">
                 Ishara • इशारा — Bridging Silence in Clinical Care with Dignity
                 and Precision.
               </span>
             </div>
-            <div className="flex items-center gap-1 text-xs text-slate-600">
+            <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-600">
               <span>Built for</span>
-              <span className="text-[#5BBFD4] font-semibold">
+              <span className="text-[#0D748A] dark:text-[#5BBFD4] font-semibold">
                 Bit N Build 2026
               </span>
               <span>· Track 1: Access &amp; Inclusion</span>

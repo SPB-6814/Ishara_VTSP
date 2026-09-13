@@ -6,7 +6,6 @@ import type { GestureTextPayload } from '@/hooks/use-session-realtime'
 import Image from 'next/image'
 import { EmergencyAlertBanner } from '@/components/emergency-alert-banner'
 import { TranscriptFeed, isSevereOrCriticalEvent } from '@/components/transcript-feed'
-import { DoctorPatientChat } from '@/components/doctor-patient-chat'
 import { useSessionRealtime } from '@/hooks/use-session-realtime'
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition'
 import { searchClips } from '@/lib/isl-clips'
@@ -611,9 +610,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Two-Column Clinical Section: Left = Communication Console, Right = Live Transcript Feed */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left Column (7 cols): Clinician Communication Console */}
-          <div className="lg:col-span-7 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+          {/* Left Column: Clinician Communication Console */}
+          <div className="space-y-4">
             <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm">
               <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between">
@@ -698,14 +697,6 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Two-Way Patient-Doctor Chat Window (Below ISL Sign Input Block) */}
-            <DoctorPatientChat
-              events={events}
-              patientDisplayName={patientDisplayName}
-              onSendISLPhrase={handleSendISLPhrase}
-              isSearching={isSearching}
-            />
-
             {/* Video Call Tile (When LiveKit is Connected) */}
             {sessionStatus === 'interpreter_connected' && (
               <Card className="bg-indigo-950 text-white border-2 border-indigo-500 overflow-hidden shadow-xl">
@@ -737,9 +728,9 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Right Column (5 cols): Live Audit Trail / Transcript Feed */}
-          <div className="lg:col-span-5 space-y-4">
-            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm h-full flex flex-col">
+          {/* Right Column: Live Audit Trail / Transcript Feed */}
+          <div className="space-y-4">
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
               <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -747,17 +738,17 @@ export default function DashboardPage() {
                       <Clock className="w-4 h-4 text-[#084C5B]" />
                       Live Interaction Audit Trail
                     </CardTitle>
-                    <span className="text-[10px] font-bold text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 px-1.5 py-0.5 rounded">
-                      Critical Only
+                    <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-950/60 border border-teal-300 dark:border-teal-800 px-1.5 py-0.5 rounded">
+                      Live Sync
                     </span>
                   </div>
                   <span className="text-xs text-slate-400">
-                    {events.filter(isSevereOrCriticalEvent).length} severe
+                    {events.length} interaction{events.length === 1 ? '' : 's'}
                   </span>
                 </div>
               </CardHeader>
               <CardContent className="pt-4 flex-1 overflow-y-auto max-h-[600px]">
-                <TranscriptFeed events={events} initialFilterSevere={true} />
+                <TranscriptFeed events={events} initialFilterSevere={false} />
               </CardContent>
             </Card>
           </div>

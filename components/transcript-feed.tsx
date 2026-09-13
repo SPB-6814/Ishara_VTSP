@@ -207,7 +207,7 @@ export function TranscriptFeed({ events, initialFilterSevere = true }: Transcrip
             No Severe or Critical Health Cases
           </p>
           <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
-            Routine patient needs (e.g. water, blanket) and staff ISL replies are featured in the Bedside Dialogue chat window.
+            Routine patient requests and staff ISL replies can be viewed by selecting &apos;Show All&apos; above.
           </p>
         </div>
       ) : (

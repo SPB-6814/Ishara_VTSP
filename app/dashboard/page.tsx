@@ -126,7 +126,21 @@ export default function HospitalRosterPage() {
         .order('created_at', { ascending: false })
 
       if (sessData && sessData.length > 0) {
-        setSessions(sessData)
+        // Deduplicate sessions so each unique bed/patient appears at most once
+        const seenIds = new Set<string>()
+        const seenNames = new Set<string>()
+        const uniqueSessions: BedSession[] = []
+
+        for (const s of sessData) {
+          const normName = s.patient_display_name.trim().toLowerCase()
+          if (!seenIds.has(s.id) && !seenNames.has(normName)) {
+            seenIds.add(s.id)
+            seenNames.add(normName)
+            uniqueSessions.push(s)
+          }
+        }
+
+        setSessions(uniqueSessions)
       } else {
         // Fallback to default pre-seeded sessions if none returned
         setSessions([
@@ -136,7 +150,7 @@ export default function HospitalRosterPage() {
             patient_display_name: 'Bed 4A - Ramesh Kumar (ISL)',
             status: 'active',
             active_mode: 'pictogram',
-            created_at: new Date().toISOString(),
+            created_at: '2026-09-12T06:30:00.000Z',
           },
           {
             id: '00000000-0000-0000-0000-000000000002',
@@ -144,7 +158,7 @@ export default function HospitalRosterPage() {
             patient_display_name: 'ICU Bed 2 - Sunita Patel (Deaf/Mute)',
             status: 'active',
             active_mode: 'pictogram',
-            created_at: new Date().toISOString(),
+            created_at: '2026-09-12T07:15:00.000Z',
           },
         ])
       }
@@ -195,6 +209,23 @@ export default function HospitalRosterPage() {
       toast.error('Failed to create bedside session.')
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleDischarge = async (sessionId: string, patientName: string) => {
+    if (!confirm(`Are you sure you want to discharge "${patientName}" and close this bed?`)) {
+      return
+    }
+    try {
+      await fetch(`/api/session/${sessionId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'closed' }),
+      })
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId))
+      toast.success(`${patientName} discharged successfully`)
+    } catch {
+      toast.error('Failed to discharge patient')
     }
   }
 
@@ -382,7 +413,19 @@ export default function HospitalRosterPage() {
                       <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
                         <div className="flex items-center gap-1.5 text-slate-500">
                           <Clock className="w-3.5 h-3.5" />
-                          <span>Admitted: {new Date(sess.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span>
+                            Admitted: {(() => {
+                              try {
+                                const d = new Date(sess.created_at)
+                                const isToday = new Date().toDateString() === d.toDateString()
+                                return isToday
+                                  ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                  : `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                              } catch {
+                                return sess.created_at
+                              }
+                            })()}
+                          </span>
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -410,6 +453,17 @@ export default function HospitalRosterPage() {
                           >
                             <span>Open Console</span>
                             <ExternalLink className="w-3.5 h-3.5" />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDischarge(sess.id, sess.patient_display_name)}
+                            className="h-8 px-2 text-xs text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:hover:text-red-400 transition-colors"
+                            title={`Discharge ${sess.patient_display_name} / Close Bed`}
+                            aria-label={`Discharge ${sess.patient_display_name}`}
+                          >
+                            <X className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </div>

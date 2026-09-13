@@ -9,7 +9,7 @@
  *  - Live <video> + <canvas> overlay drawing MediaPipe hand skeleton
  *  - Privacy shutter toggle (camera on / off)
  *  - Confidence progress ring (fills as gesture is held)
- *  - 800ms debounce before dispatching via sendGestureText
+ *  - High-precision gesture dispatch via sendGestureText
  *  - Word buffer chips showing accumulated session words
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -35,12 +35,19 @@ const HAND_CONNECTIONS: [number, number][] = [
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface VisionGestureCameraProps {
-  /** Called after 800ms debounce with confirmed gesture text + confidence */
+  /** Called after hold confirmation with confirmed gesture text + confidence */
   sendGestureText: (text: string, confidence: number) => void
   /** Optional callback when camera active state changes */
   onCameraStateChange?: (active: boolean) => void
   className?: string
 }
+
+// ─── Types for Landmark Input ─────────────────────────────────────────────────
+type LandmarkPt = { x: number; y: number }
+type LandmarkInput =
+  | LandmarkPt[]
+  | { left: LandmarkPt[] | null; right: LandmarkPt[] | null }
+  | null
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -53,8 +60,8 @@ export function VisionGestureCamera({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
   const streamRef = useRef<MediaStream | null>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastSentRef = useRef<string>('')
+  const lastSentLabelRef = useRef<string>('')
+  const lastSentTimeRef = useRef<number>(0)
 
   const [cameraOn, setCameraOn] = useState(false)
   const [modelReady, setModelReady] = useState(false)
@@ -68,7 +75,7 @@ export function VisionGestureCamera({
   // ─── Skeleton drawing ───────────────────────────────────────────────────────
 
   const drawSkeleton = useCallback(
-    (landmarks: { x: number; y: number }[] | null) => {
+    (landmarks: LandmarkInput) => {
       const canvas = canvasRef.current
       const video = videoRef.current
       if (!canvas || !video) return
@@ -84,22 +91,37 @@ export function VisionGestureCamera({
       const W = canvas.width
       const H = canvas.height
 
-      // Connection lines
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)'
-      ctx.lineWidth = 1.5
-      for (const [a, b] of HAND_CONNECTIONS) {
-        ctx.beginPath()
-        ctx.moveTo(landmarks[a].x * W, landmarks[a].y * H)
-        ctx.lineTo(landmarks[b].x * W, landmarks[b].y * H)
-        ctx.stroke()
+      const drawHand = (handLms: LandmarkPt[], dotColor = '#4ade80') => {
+        if (!handLms || handLms.length === 0) return
+        const isNonZero = handLms.some(pt => pt.x !== 0 || pt.y !== 0)
+        if (!isNonZero) return
+
+        // Connection lines
+        ctx.strokeStyle = 'rgba(255,255,255,0.55)'
+        ctx.lineWidth = 1.5
+        for (const [a, b] of HAND_CONNECTIONS) {
+          if (handLms[a] && handLms[b]) {
+            ctx.beginPath()
+            ctx.moveTo(handLms[a].x * W, handLms[a].y * H)
+            ctx.lineTo(handLms[b].x * W, handLms[b].y * H)
+            ctx.stroke()
+          }
+        }
+
+        // Landmark dots
+        for (const lm of handLms) {
+          ctx.beginPath()
+          ctx.arc(lm.x * W, lm.y * H, 3, 0, Math.PI * 2)
+          ctx.fillStyle = dotColor
+          ctx.fill()
+        }
       }
 
-      // Landmark dots
-      for (const lm of landmarks) {
-        ctx.beginPath()
-        ctx.arc(lm.x * W, lm.y * H, 3, 0, Math.PI * 2)
-        ctx.fillStyle = '#4ade80'
-        ctx.fill()
+      if (Array.isArray(landmarks)) {
+        drawHand(landmarks, '#4ade80')
+      } else {
+        if (landmarks.left) drawHand(landmarks.left, '#22c55e')
+        if (landmarks.right) drawHand(landmarks.right, '#2dd4bf')
       }
     },
     []
@@ -115,7 +137,14 @@ export function VisionGestureCamera({
         return
       }
 
-      const { gesture, landmarks, pendingConfidence, hasFace } = classifyFrame(video, ts)
+      const {
+        gesture,
+        candidate,
+        landmarks,
+        handsDetected: detectedHands,
+        pendingConfidence,
+        hasFace,
+      } = classifyFrame(video, ts)
 
       drawSkeleton(landmarks)
       setPendingConf(pendingConfidence)
@@ -123,6 +152,7 @@ export function VisionGestureCamera({
         setFaceDetected(hasFace)
       }
 
+      // Model functionality: Handle gesture confirmation and candidate preview
       if (gesture) {
         setLastGesture(gesture)
         setFlashLabel(gesture.displayText)
@@ -134,15 +164,18 @@ export function VisionGestureCamera({
           return next
         })
 
-        // 800ms debounce before sending to avoid duplicate fires
-        const key = `${gesture.label}_${Date.now()}`
-        if (debounceRef.current) clearTimeout(debounceRef.current)
-        debounceRef.current = setTimeout(() => {
-          if (key !== lastSentRef.current) {
-            lastSentRef.current = key
-            sendGestureText(gesture.displayText, gesture.confidence)
-          }
-        }, 800)
+        // Broadcast to doctor via sendGestureText with duplicate throttle
+        const now = Date.now()
+        if (gesture.label !== lastSentLabelRef.current || now - lastSentTimeRef.current > 2500) {
+          lastSentLabelRef.current = gesture.label
+          lastSentTimeRef.current = now
+          sendGestureText(gesture.displayText, gesture.confidence)
+        }
+      } else if (candidate) {
+        // While gesture is being held, show live candidate in friend's HUD pill
+        setLastGesture(candidate)
+      } else if (detectedHands === 0) {
+        setLastGesture(null)
       }
 
       rafRef.current = requestAnimationFrame(tick)
@@ -184,6 +217,7 @@ export function VisionGestureCamera({
     }
     setCameraOn(false)
     setPendingConf(0)
+    setLastGesture(null)
     setFaceDetected(false)
     onCameraStateChange?.(false)
   }, [onCameraStateChange])
@@ -202,7 +236,6 @@ export function VisionGestureCamera({
 
     return () => {
       cancelAnimationFrame(rafRef.current)
-      if (debounceRef.current) clearTimeout(debounceRef.current)
       destroyRecognizers()
       streamRef.current?.getTracks().forEach(t => t.stop())
     }
